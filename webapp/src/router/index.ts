@@ -2,14 +2,13 @@ import AboutView from '@/views/AboutView.vue';
 import ConfigAdminView from '@/views/ConfigAdminView.vue';
 import ConsoleInfoView from '@/views/ConsoleInfoView.vue';
 import DeviceAdminView from '@/views/DeviceAdminView.vue'
-import DtuAdminView from '@/views/DtuAdminView.vue';
 import FirmwareUpgradeView from '@/views/FirmwareUpgradeView.vue';
 import HomeView from '@/views/HomeView.vue';
-import InverterAdminView from '@/views/InverterAdminView.vue';
 import LoginView from '@/views/LoginView.vue';
 import MaintenanceRebootView from '@/views/MaintenanceRebootView.vue';
 import MqttAdminView from '@/views/MqttAdminView.vue';
 import MqttInfoView from '@/views/MqttInfoView.vue';
+import TempLoggerAdminView from '@/views/TempLoggerAdminView.vue';
 import NetworkAdminView from '@/views/NetworkAdminView.vue';
 import NetworkInfoView from '@/views/NetworkInfoView.vue';
 import NtpAdminView from '@/views/NtpAdminView.vue';
@@ -78,14 +77,9 @@ const router = createRouter({
         component: MqttAdminView
     },
     {
-        path: '/settings/inverter',
-        name: 'Inverter Settings',
-        component: InverterAdminView
-    },
-    {
-        path: '/settings/dtu',
-        name: 'DTU Settings',
-        component: DtuAdminView
+        path: '/settings/templogger',
+        name: 'Templogger Settings',
+        component: TempLoggerAdminView
     },
     {
         path: '/settings/device',

@@ -3,21 +3,18 @@
  * Copyright (C) 2022-2023 Thomas Basler and others
  */
 #include "Configuration.h"
+#include "DS18B20List.h"
 #include "Datastore.h"
 #include "Display_Graphic.h"
-#include "InverterSettings.h"
-#include "Led_Single.h"
 #include "MessageOutput.h"
-#include "MqttHandleDtu.h"
+#include "MqttHandleDS18B20.h"
 #include "MqttHandleHass.h"
-#include "MqttHandleInverter.h"
-#include "MqttHandleInverterTotal.h"
 #include "MqttSettings.h"
 #include "NetworkSettings.h"
 #include "NtpSettings.h"
 #include "PinMapping.h"
+#include "SDCard.h"
 #include "Scheduler.h"
-#include "SunPosition.h"
 #include "Utils.h"
 #include "WebApi.h"
 #include "defaults.h"
@@ -92,17 +89,10 @@ void setup()
     NtpSettings.init();
     MessageOutput.println("done");
 
-    // Initialize SunPosition
-    MessageOutput.print("Initialize SunPosition... ");
-    SunPosition.init(scheduler);
-    MessageOutput.println("done");
-
     // Initialize MqTT
     MessageOutput.print("Initialize MqTT... ");
     MqttSettings.init();
-    MqttHandleDtu.init(scheduler);
-    MqttHandleInverter.init(scheduler);
-    MqttHandleInverterTotal.init(scheduler);
+    MqttHandleDS18B20.init(scheduler);
     MqttHandleHass.init(scheduler);
     MessageOutput.println("done");
 
@@ -113,13 +103,14 @@ void setup()
 
     // Initialize Display
     MessageOutput.print("Initialize Display... ");
-    Display.init(
-        scheduler,
-        static_cast<DisplayType_t>(pin.display_type),
+
+    Display.init(scheduler, DisplayType_t::SSD1306, 5, 4, -1, 16
+        /*static_cast<DisplayType_t>(pin.display_type),
         pin.display_data,
         pin.display_clk,
         pin.display_cs,
-        pin.display_reset);
+        pin.display_reset*/
+    );
     Display.setOrientation(config.Display.Rotation);
     Display.enablePowerSafe = config.Display.PowerSafe;
     Display.enableScreensaver = config.Display.ScreenSaver;
@@ -128,27 +119,12 @@ void setup()
     Display.setStartupDisplay();
     MessageOutput.println("done");
 
-    // Initialize Single LEDs
-    MessageOutput.print("Initialize LEDs... ");
-    LedSingle.init(scheduler);
+    MessageOutput.print("Initialize temperature logger... ");
+    DS18B20List.init(scheduler);
+    SDCard.init(scheduler);
     MessageOutput.println("done");
 
-    // Check for default DTU serial
-    MessageOutput.print("Check for default DTU serial... ");
-    if (config.Dtu.Serial == DTU_SERIAL) {
-        MessageOutput.print("generate serial based on ESP chip id: ");
-        const uint64_t dtuId = Utils::generateDtuSerial();
-        MessageOutput.printf("%0x%08x... ",
-            ((uint32_t)((dtuId >> 32) & 0xFFFFFFFF)),
-            ((uint32_t)(dtuId & 0xFFFFFFFF)));
-        config.Dtu.Serial = dtuId;
-        Configuration.write();
-    }
-    MessageOutput.println("done");
-
-    InverterSettings.init(scheduler);
-
-    Datastore.init(scheduler);
+    Datastore.init();
 }
 
 void loop()

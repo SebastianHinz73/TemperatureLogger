@@ -4,7 +4,6 @@
  */
 #include "Utils.h"
 #include "Display_Graphic.h"
-#include "Led_Single.h"
 #include "MessageOutput.h"
 #include <Esp.h>
 
@@ -59,7 +58,6 @@ int Utils::getTimezoneOffset()
 
 void Utils::restartDtu()
 {
-    LedSingle.turnAllOff();
     Display.setStatus(false);
     yield();
     delay(1000);

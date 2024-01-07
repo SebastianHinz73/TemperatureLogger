@@ -4,207 +4,152 @@
  */
 #include "Datastore.h"
 #include "Configuration.h"
-#include <Hoymiles.h>
+#include "DS18B20List.h"
+#include "MessageOutput.h"
+#include "SDCard.h"
 
 DatastoreClass Datastore;
 
-void DatastoreClass::init(Scheduler& scheduler)
+#define PRINT_VALUES(X, Y)                                         \
+    for (decltype(X)::index_t i = 0; i < X.size(); i++) {          \
+        uint32_t h = X[i] / 3600;                                  \
+        uint32_t m = (X[i] - h * 3600) / 60;                       \
+        uint32_t s = X[i] - h * 3600 - m * 60;                     \
+        MessageOutput.printf("hh:%02d:%02d (%.2f), ", m, s, Y[i]); \
+    }                                                              \
+    MessageOutput.println();
+
+/////////////////////////
+void DatastoreClass::init()
 {
-    scheduler.addTask(_loopTask);
-    _loopTask.setCallback(std::bind(&DatastoreClass::loop, this));
-    _loopTask.setIterations(TASK_FOREVER);
-    _loopTask.setInterval(1 * TASK_SECOND);
-    _loopTask.enable();
 }
 
 void DatastoreClass::loop()
 {
-    if (!Hoymiles.isAllRadioIdle()) {
-        _loopTask.forceNextIteration();
-        return;
-    }
+}
 
-    uint8_t isProducing = 0;
-    uint8_t isReachable = 0;
-    uint8_t pollEnabledCount = 0;
-
+void DatastoreClass::addSensor(uint16_t serial)
+{
     std::lock_guard<std::mutex> lock(_mutex);
 
-    _totalAcYieldTotalEnabled = 0;
-    _totalAcYieldTotalDigits = 0;
+    uint8_t mDay = 0;
+    struct tm timeinfo;
+    if (getLocalTime(&timeinfo, 5)) {
+        // In most cases there is no valid time if sensor is added
+        mDay = timeinfo.tm_mday;
+    }
+    _list.push_back(std::make_unique<dataSensor>(serial, mDay));
+}
 
-    _totalAcYieldDayEnabled = 0;
-    _totalAcYieldDayDigits = 0;
+void DatastoreClass::addValue(uint16_t serial, float value)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
 
-    _totalAcPowerEnabled = 0;
-    _totalAcPowerDigits = 0;
-
-    _totalDcPowerEnabled = 0;
-    _totalDcPowerDigits = 0;
-
-    _totalDcPowerIrradiation = 0;
-    _totalDcIrradiationInstalled = 0;
-
-    _isAllEnabledProducing = true;
-    _isAllEnabledReachable = true;
-
-    for (uint8_t i = 0; i < Hoymiles.getNumInverters(); i++) {
-        auto inv = Hoymiles.getInverterByPos(i);
-        if (inv == nullptr) {
+    for (const auto& entry : _list) {
+        if (entry->_serial != serial) {
             continue;
         }
 
-        auto cfg = Configuration.getInverterConfig(inv->serial());
-        if (cfg == nullptr) {
-            continue;
+        struct tm timeinfo;
+        entry->_timeValid = getLocalTime(&timeinfo, 5);
+
+        // save one value if time is not valid
+        if (!entry->_timeValid) {
+            MessageOutput.printf("Datastore: getLocalTime failed.\r\n");
+            entry->_actValueChanged = entry->_valueTimeNotValid != value;
+            entry->_valueTimeNotValid = value;
+            break;
         }
 
-        if (inv->getEnablePolling()) {
-            pollEnabledCount++;
+        bool bNewDay = false;
+        if (timeinfo.tm_mday != entry->_mDay) {
+            bNewDay = true;
+            entry->_mDay = timeinfo.tm_mday;
         }
 
-        if (inv->isProducing()) {
-            isProducing++;
-        } else {
-            if (inv->getEnablePolling()) {
-                _isAllEnabledProducing = false;
-            }
-        }
+        bool bShift = false;
+        entry->_actValueChanged = entry->_values.size() == 0 ? true : (value != entry->_values[0]);
 
-        if (inv->isReachable()) {
-            isReachable++;
-        } else {
-            if (inv->getEnablePolling()) {
-                _isAllEnabledReachable = false;
-            }
-        }
-
-        for (auto& c : inv->Statistics()->getChannelsByType(TYPE_AC)) {
-            if (cfg->Poll_Enable) {
-                _totalAcYieldTotalEnabled += inv->Statistics()->getChannelFieldValue(TYPE_AC, c, FLD_YT);
-                _totalAcYieldDayEnabled += inv->Statistics()->getChannelFieldValue(TYPE_AC, c, FLD_YD);
-
-                _totalAcYieldTotalDigits = max<unsigned int>(_totalAcYieldTotalDigits, inv->Statistics()->getChannelFieldDigits(TYPE_AC, c, FLD_YT));
-                _totalAcYieldDayDigits = max<unsigned int>(_totalAcYieldDayDigits, inv->Statistics()->getChannelFieldDigits(TYPE_AC, c, FLD_YD));
-            }
-            if (inv->getEnablePolling()) {
-                _totalAcPowerEnabled += inv->Statistics()->getChannelFieldValue(TYPE_AC, c, FLD_PAC);
-                _totalAcPowerDigits = max<unsigned int>(_totalAcPowerDigits, inv->Statistics()->getChannelFieldDigits(TYPE_AC, c, FLD_PAC));
-            }
-        }
-
-        for (auto& c : inv->Statistics()->getChannelsByType(TYPE_DC)) {
-            if (inv->getEnablePolling()) {
-                _totalDcPowerEnabled += inv->Statistics()->getChannelFieldValue(TYPE_DC, c, FLD_PDC);
-                _totalDcPowerDigits = max<unsigned int>(_totalDcPowerDigits, inv->Statistics()->getChannelFieldDigits(TYPE_DC, c, FLD_PDC));
-
-                if (inv->Statistics()->getStringMaxPower(c) > 0) {
-                    _totalDcPowerIrradiation += inv->Statistics()->getChannelFieldValue(TYPE_DC, c, FLD_PDC);
-                    _totalDcIrradiationInstalled += inv->Statistics()->getStringMaxPower(c);
+        // 0      1
+        // 17.8   17.8
+        // => If new value also 17.8 (and if no new day) update timestamp from 0
+        if (entry->_values.size() > 1) {
+            if ((value == entry->_values[0]) && (value == entry->_values[1])) {
+                // no new day: if two values equal -> update timestamp
+                if (!bNewDay) {
+                    bShift = true;
+                }
+                // new day: if three value equal -> only update timestamp
+                else if ((entry->_values.size() > 2) && (value == entry->_values[2])) {
+                    bShift = true;
                 }
             }
         }
+        if (bShift) {
+            entry->_values.shift();
+            entry->_times.shift();
+        }
+
+        // 0      1
+        // 17.2   17.8
+        // => insert all values
+        time_t now;
+        time(&now);
+        entry->_values.unshift(value);
+        entry->_times.unshift(now);
+
+        // PRINT_VALUES(entry->_times, entry->_values);
+
+        if (!bShift && entry->_values.size() > 1) {
+            SDCard.writeValue(serial, entry->_times[1], entry->_values[1]);
+        }
+        break;
     }
-
-    _isAtLeastOneProducing = isProducing > 0;
-    _isAtLeastOneReachable = isReachable > 0;
-    _isAtLeastOnePollEnabled = pollEnabledCount > 0;
-
-    _totalDcIrradiation = _totalDcIrradiationInstalled > 0 ? _totalDcPowerIrradiation / _totalDcIrradiationInstalled * 100.0f : 0;
 }
 
-float DatastoreClass::getTotalAcYieldTotalEnabled()
+bool DatastoreClass::getTemperature(uint16_t serial, uint32_t& time, float& value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    return _totalAcYieldTotalEnabled;
+    for (const auto& entry : _list) {
+        if (entry->_serial == serial) {
+            if (entry->_times.size() > 0) {
+                time = entry->_times.first();
+                value = entry->_values.first();
+                return true;
+            }
+            if (!entry->_timeValid) {
+                time = 0;
+                value = entry->_valueTimeNotValid;
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-float DatastoreClass::getTotalAcYieldDayEnabled()
+bool DatastoreClass::valueChanged(uint16_t serial)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    return _totalAcYieldDayEnabled;
+    for (const auto& entry : _list) {
+        if (entry->_serial == serial) {
+            bool rc = entry->_actValueChanged;
+            entry->_actValueChanged = false;
+            return rc;
+        }
+    }
+    return false;
 }
 
-float DatastoreClass::getTotalAcPowerEnabled()
+bool DatastoreClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    return _totalAcPowerEnabled;
+
+    return SDCard.getFileSize(serial, timeinfo, size);
 }
 
-float DatastoreClass::getTotalDcPowerEnabled()
+bool DatastoreClass::getTemperatureFile(uint16_t serial, const tm& timeinfo, char* buffer, size_t& size)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    return _totalDcPowerEnabled;
-}
 
-float DatastoreClass::getTotalDcPowerIrradiation()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _totalDcPowerIrradiation;
-}
-
-float DatastoreClass::getTotalDcIrradiationInstalled()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _totalDcIrradiationInstalled;
-}
-
-float DatastoreClass::getTotalDcIrradiation()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _totalDcIrradiation;
-}
-
-uint32_t DatastoreClass::getTotalAcYieldTotalDigits()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _totalAcYieldTotalDigits;
-}
-
-uint32_t DatastoreClass::getTotalAcYieldDayDigits()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _totalAcYieldDayDigits;
-}
-
-uint32_t DatastoreClass::getTotalAcPowerDigits()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _totalAcPowerDigits;
-}
-
-uint32_t DatastoreClass::getTotalDcPowerDigits()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _totalDcPowerDigits;
-}
-
-bool DatastoreClass::getIsAtLeastOneReachable()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _isAtLeastOneReachable;
-}
-
-bool DatastoreClass::getIsAtLeastOneProducing()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _isAtLeastOneProducing;
-}
-
-bool DatastoreClass::getIsAllEnabledProducing()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _isAllEnabledProducing;
-}
-
-bool DatastoreClass::getIsAllEnabledReachable()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _isAllEnabledReachable;
-}
-
-bool DatastoreClass::getIsAtLeastOnePollEnabled()
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    return _isAtLeastOnePollEnabled;
+    return SDCard.getFile(serial, timeinfo, buffer, size);
 }

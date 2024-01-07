@@ -34,6 +34,8 @@ private:
     void createMqttClientObject();
 
     MqttClient* _mqttClient = nullptr;
+    String _clientId;
+    String _willTopic;
     Ticker _mqttReconnectTimer;
     MqttSubscribeParser _mqttSubscribeParser;
     std::mutex _clientLock;

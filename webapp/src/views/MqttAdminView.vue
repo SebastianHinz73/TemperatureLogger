@@ -129,9 +129,6 @@
                               v-model="mqttConfigList.mqtt_hass_expire"
                               type="checkbox"/>
 
-                <InputElement :label="$t('mqttadmin.HassIndividual')"
-                              v-model="mqttConfigList.mqtt_hass_individualpanels"
-                              type="checkbox"/>
             </CardElement>
 
             <FormFooter @reload="getMqttConfig"/>

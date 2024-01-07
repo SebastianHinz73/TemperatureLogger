@@ -12,10 +12,11 @@ import path from 'path'
 // example 'vite.user.ts': export const proxy_target = '192.168.16.107'
 let proxy_target;
 try {
-    proxy_target = require('./vite.user.ts').proxy_target;
+  proxy_target = require('./vite.user.ts').proxy_target;
 } catch (error) {
-    proxy_target = '192.168.20.110';
+  proxy_target = '192.168.20.110';
 }
+proxy_target = '192.168.178.24';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -24,11 +25,11 @@ export default defineConfig({
     viteCompression({ deleteOriginFile: true, threshold: 0 }),
     cssInjectedByJsPlugin(),
     VueI18nPlugin({
-        /* options */
-        include: path.resolve(path.dirname(fileURLToPath(import.meta.url)), './src/locales/**.json'),
-        fullInstall: false,
-        forceStringify: true,
-        strictMessage: false,
+      /* options */
+      include: path.resolve(path.dirname(fileURLToPath(import.meta.url)), './src/locales/**.json'),
+      fullInstall: false,
+      forceStringify: true,
+      strictMessage: false,
     }),
   ],
   resolve: {

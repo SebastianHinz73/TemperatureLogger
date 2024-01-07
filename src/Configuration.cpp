@@ -69,6 +69,18 @@ bool ConfigurationClass::write()
     mqtt["publish_interval"] = config.Mqtt.PublishInterval;
     mqtt["clean_session"] = config.Mqtt.CleanSession;
 
+    JsonObject templogger = doc.createNestedObject("templogger");
+    templogger["pollinterval"] = config.DS18B20.PollInterval;
+    templogger["fahrenheit"] = config.DS18B20.Fahrenheit;
+
+    JsonArray sensors = doc.createNestedArray("sensors");
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        JsonObject sensor = sensors.createNestedObject();
+        sensor["serial"] = config.DS18B20.Sensors[i].Serial;
+        sensor["connected"] = config.DS18B20.Sensors[i].Connected;
+        sensor["name"] = config.DS18B20.Sensors[i].Name;
+    }
+
     JsonObject mqtt_lwt = mqtt.createNestedObject("lwt");
     mqtt_lwt["topic"] = config.Mqtt.Lwt.Topic;
     mqtt_lwt["value_online"] = config.Mqtt.Lwt.Value_Online;
@@ -89,13 +101,6 @@ bool ConfigurationClass::write()
     mqtt_hass["individual_panels"] = config.Mqtt.Hass.IndividualPanels;
     mqtt_hass["expire"] = config.Mqtt.Hass.Expire;
 
-    JsonObject dtu = doc.createNestedObject("dtu");
-    dtu["serial"] = config.Dtu.Serial;
-    dtu["poll_interval"] = config.Dtu.PollInterval;
-    dtu["nrf_pa_level"] = config.Dtu.Nrf.PaLevel;
-    dtu["cmt_pa_level"] = config.Dtu.Cmt.PaLevel;
-    dtu["cmt_frequency"] = config.Dtu.Cmt.Frequency;
-
     JsonObject security = doc.createNestedObject("security");
     security["password"] = config.Security.Password;
     security["allow_readonly"] = config.Security.AllowReadonly;
@@ -110,36 +115,6 @@ bool ConfigurationClass::write()
     display["contrast"] = config.Display.Contrast;
     display["language"] = config.Display.Language;
     display["diagram_duration"] = config.Display.DiagramDuration;
-
-    JsonArray leds = device.createNestedArray("led");
-    for (uint8_t i = 0; i < PINMAPPING_LED_COUNT; i++) {
-        JsonObject led = leds.createNestedObject();
-        led["brightness"] = config.Led_Single[i].Brightness;
-    }
-
-    JsonArray inverters = doc.createNestedArray("inverters");
-    for (uint8_t i = 0; i < INV_MAX_COUNT; i++) {
-        JsonObject inv = inverters.createNestedObject();
-        inv["serial"] = config.Inverter[i].Serial;
-        inv["name"] = config.Inverter[i].Name;
-        inv["order"] = config.Inverter[i].Order;
-        inv["poll_enable"] = config.Inverter[i].Poll_Enable;
-        inv["poll_enable_night"] = config.Inverter[i].Poll_Enable_Night;
-        inv["command_enable"] = config.Inverter[i].Command_Enable;
-        inv["command_enable_night"] = config.Inverter[i].Command_Enable_Night;
-        inv["reachable_threshold"] = config.Inverter[i].ReachableThreshold;
-        inv["zero_runtime"] = config.Inverter[i].ZeroRuntimeDataIfUnrechable;
-        inv["zero_day"] = config.Inverter[i].ZeroYieldDayOnMidnight;
-        inv["yieldday_correction"] = config.Inverter[i].YieldDayCorrection;
-
-        JsonArray channel = inv.createNestedArray("channel");
-        for (uint8_t c = 0; c < INV_MAX_CHAN_COUNT; c++) {
-            JsonObject chanData = channel.createNestedObject();
-            chanData["name"] = config.Inverter[i].channel[c].Name;
-            chanData["max_power"] = config.Inverter[i].channel[c].MaxChannelPower;
-            chanData["yield_total_offset"] = config.Inverter[i].channel[c].YieldTotalOffset;
-        }
-    }
 
     // Serialize JSON to file
     if (serializeJson(doc, f) == 0) {
@@ -236,6 +211,18 @@ bool ConfigurationClass::read()
     config.Mqtt.PublishInterval = mqtt["publish_interval"] | MQTT_PUBLISH_INTERVAL;
     config.Mqtt.CleanSession = mqtt["clean_session"] | MQTT_CLEAN_SESSION;
 
+    JsonObject templogger = doc["templogger"];
+    config.DS18B20.PollInterval = templogger["pollinterval"] | TEMPLOGGER_DS18B20_POLL_INTERVAL;
+    config.DS18B20.Fahrenheit = templogger["fahrenheit"] | TEMPLOGGER_DS18B20_FAHRENHEIT;
+
+    JsonArray sensors = doc["sensors"];
+
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        JsonObject sensor = sensors[i].as<JsonObject>();
+        config.DS18B20.Sensors[i].Serial = sensor["serial"] | 0U;
+        strlcpy(config.DS18B20.Sensors[i].Name, sensor["name"] | "undefined", sizeof(config.DS18B20.Sensors[i].Name));
+        config.DS18B20.Sensors[i].Connected = sensor["connected"] | false;
+    }
     JsonObject mqtt_lwt = mqtt["lwt"];
     strlcpy(config.Mqtt.Lwt.Topic, mqtt_lwt["topic"] | MQTT_LWT_TOPIC, sizeof(config.Mqtt.Lwt.Topic));
     strlcpy(config.Mqtt.Lwt.Value_Online, mqtt_lwt["value_online"] | MQTT_LWT_ONLINE, sizeof(config.Mqtt.Lwt.Value_Online));
@@ -256,13 +243,6 @@ bool ConfigurationClass::read()
     config.Mqtt.Hass.IndividualPanels = mqtt_hass["individual_panels"] | MQTT_HASS_INDIVIDUALPANELS;
     strlcpy(config.Mqtt.Hass.Topic, mqtt_hass["topic"] | MQTT_HASS_TOPIC, sizeof(config.Mqtt.Hass.Topic));
 
-    JsonObject dtu = doc["dtu"];
-    config.Dtu.Serial = dtu["serial"] | DTU_SERIAL;
-    config.Dtu.PollInterval = dtu["poll_interval"] | DTU_POLL_INTERVAL;
-    config.Dtu.Nrf.PaLevel = dtu["nrf_pa_level"] | DTU_NRF_PA_LEVEL;
-    config.Dtu.Cmt.PaLevel = dtu["cmt_pa_level"] | DTU_CMT_PA_LEVEL;
-    config.Dtu.Cmt.Frequency = dtu["cmt_frequency"] | DTU_CMT_FREQUENCY;
-
     JsonObject security = doc["security"];
     strlcpy(config.Security.Password, security["password"] | ACCESS_POINT_PASSWORD, sizeof(config.Security.Password));
     config.Security.AllowReadonly = security["allow_readonly"] | SECURITY_ALLOW_READONLY;
@@ -277,36 +257,6 @@ bool ConfigurationClass::read()
     config.Display.Contrast = display["contrast"] | DISPLAY_CONTRAST;
     config.Display.Language = display["language"] | DISPLAY_LANGUAGE;
     config.Display.DiagramDuration = display["diagram_duration"] | DISPLAY_DIAGRAM_DURATION;
-
-    JsonArray leds = device["led"];
-    for (uint8_t i = 0; i < PINMAPPING_LED_COUNT; i++) {
-        JsonObject led = leds[i].as<JsonObject>();
-        config.Led_Single[i].Brightness = led["brightness"] | LED_BRIGHTNESS;
-    }
-
-    JsonArray inverters = doc["inverters"];
-    for (uint8_t i = 0; i < INV_MAX_COUNT; i++) {
-        JsonObject inv = inverters[i].as<JsonObject>();
-        config.Inverter[i].Serial = inv["serial"] | 0ULL;
-        strlcpy(config.Inverter[i].Name, inv["name"] | "", sizeof(config.Inverter[i].Name));
-        config.Inverter[i].Order = inv["order"] | 0;
-
-        config.Inverter[i].Poll_Enable = inv["poll_enable"] | true;
-        config.Inverter[i].Poll_Enable_Night = inv["poll_enable_night"] | true;
-        config.Inverter[i].Command_Enable = inv["command_enable"] | true;
-        config.Inverter[i].Command_Enable_Night = inv["command_enable_night"] | true;
-        config.Inverter[i].ReachableThreshold = inv["reachable_threshold"] | REACHABLE_THRESHOLD;
-        config.Inverter[i].ZeroRuntimeDataIfUnrechable = inv["zero_runtime"] | false;
-        config.Inverter[i].ZeroYieldDayOnMidnight = inv["zero_day"] | false;
-        config.Inverter[i].YieldDayCorrection = inv["yieldday_correction"] | false;
-
-        JsonArray channel = inv["channel"];
-        for (uint8_t c = 0; c < INV_MAX_CHAN_COUNT; c++) {
-            config.Inverter[i].channel[c].MaxChannelPower = channel[c]["max_power"] | 0;
-            config.Inverter[i].channel[c].YieldTotalOffset = channel[c]["yield_total_offset"] | 0.0f;
-            strlcpy(config.Inverter[i].channel[c].Name, channel[c]["name"] | "", sizeof(config.Inverter[i].channel[c].Name));
-        }
-    }
 
     f.close();
     return true;
@@ -333,26 +283,9 @@ void ConfigurationClass::migrate()
         return;
     }
 
-    if (config.Cfg.Version < 0x00011700) {
-        JsonArray inverters = doc["inverters"];
-        for (uint8_t i = 0; i < INV_MAX_COUNT; i++) {
-            JsonObject inv = inverters[i].as<JsonObject>();
-            JsonArray channels = inv["channels"];
-            for (uint8_t c = 0; c < INV_MAX_CHAN_COUNT; c++) {
-                config.Inverter[i].channel[c].MaxChannelPower = channels[c];
-                strlcpy(config.Inverter[i].channel[c].Name, "", sizeof(config.Inverter[i].channel[c].Name));
-            }
-        }
-    }
-
     if (config.Cfg.Version < 0x00011800) {
         JsonObject mqtt = doc["mqtt"];
         config.Mqtt.PublishInterval = mqtt["publish_invterval"];
-    }
-
-    if (config.Cfg.Version < 0x00011900) {
-        JsonObject dtu = doc["dtu"];
-        config.Dtu.Nrf.PaLevel = dtu["pa_level"];
     }
 
     if (config.Cfg.Version < 0x00011a00) {
@@ -375,26 +308,59 @@ CONFIG_T& ConfigurationClass::get()
     return config;
 }
 
-INVERTER_CONFIG_T* ConfigurationClass::getFreeInverterSlot()
+DS18B20SENSOR_CONFIG_T* ConfigurationClass::getFirstDS18B20Config()
 {
-    for (uint8_t i = 0; i < INV_MAX_COUNT; i++) {
-        if (config.Inverter[i].Serial == 0) {
-            return &config.Inverter[i];
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        if (config.DS18B20.Sensors[i].Serial != 0 && config.DS18B20.Sensors[i].Connected) {
+            return &config.DS18B20.Sensors[i];
         }
     }
-
-    return nullptr;
+    return NULL;
 }
 
-INVERTER_CONFIG_T* ConfigurationClass::getInverterConfig(const uint64_t serial)
+uint32_t ConfigurationClass::getConfiguredSensorCnt()
 {
-    for (uint8_t i = 0; i < INV_MAX_COUNT; i++) {
-        if (config.Inverter[i].Serial == serial) {
-            return &config.Inverter[i];
+    uint32_t cnt = 0;
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        if (config.DS18B20.Sensors[i].Serial != 0) {
+            cnt++;
+        }
+    }
+    return cnt;
+}
+
+bool ConfigurationClass::addSensor(uint16_t serial)
+{
+    DS18B20SENSOR_CONFIG_T* actSensor = nullptr;
+
+    // if sensor in config -> OK
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        if (config.DS18B20.Sensors[i].Serial == serial) {
+            actSensor = &config.DS18B20.Sensors[i];
+            break;
         }
     }
 
-    return nullptr;
+    // new sensor found
+    if (actSensor == nullptr) {
+        for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+            // find free slot with Serial 0
+            if (config.DS18B20.Sensors[i].Serial == 0) {
+                actSensor = &config.DS18B20.Sensors[i];
+                if (!strcmp(actSensor->Name, "undefined")) {
+                    snprintf(actSensor->Name, sizeof(actSensor->Name), "Temp_%04X", serial);
+                }
+                break;
+            }
+        }
+    }
+
+    if (actSensor != nullptr) {
+        actSensor->Connected = true;
+        actSensor->Serial = serial;
+    }
+
+    return actSensor != nullptr;
 }
 
 ConfigurationClass Configuration;

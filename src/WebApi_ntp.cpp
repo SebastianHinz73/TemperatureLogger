@@ -5,7 +5,6 @@
 #include "WebApi_ntp.h"
 #include "Configuration.h"
 #include "NtpSettings.h"
-#include "SunPosition.h"
 #include "WebApi.h"
 #include "WebApi_errors.h"
 #include "helper.h"
@@ -51,24 +50,6 @@ void WebApiNtpClass::onNtpStatus(AsyncWebServerRequest* request)
     char timeStringBuff[50];
     strftime(timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S", &timeinfo);
     root["ntp_localtime"] = timeStringBuff;
-
-    if (SunPosition.sunriseTime(&timeinfo)) {
-        strftime(timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S", &timeinfo);
-    } else {
-        snprintf(timeStringBuff, sizeof(timeStringBuff), "--");
-    }
-    root["sun_risetime"] = timeStringBuff;
-
-    if (SunPosition.sunsetTime(&timeinfo)) {
-        strftime(timeStringBuff, sizeof(timeStringBuff), "%A, %B %d %Y %H:%M:%S", &timeinfo);
-    } else {
-        snprintf(timeStringBuff, sizeof(timeStringBuff), "--");
-    }
-    root["sun_settime"] = timeStringBuff;
-
-    root["sun_isSunsetAvailable"] = SunPosition.isSunsetAvailable();
-    root["sun_isDayPeriod"] = SunPosition.isDayPeriod();
-
     response->setLength();
     request->send(response);
 }
@@ -187,8 +168,6 @@ void WebApiNtpClass::onNtpAdminPost(AsyncWebServerRequest* request)
 
     NtpSettings.setServer();
     NtpSettings.setTimezone();
-
-    SunPosition.setDoRecalc(true);
 }
 
 void WebApiNtpClass::onNtpTimeGet(AsyncWebServerRequest* request)

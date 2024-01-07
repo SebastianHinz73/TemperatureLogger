@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include "Display_Graphic_Diagram.h"
 #include "defaults.h"
 #include <TaskSchedulerDeclarations.h>
 #include <U8g2lib.h>
@@ -27,8 +26,6 @@ public:
     void setLanguage(const uint8_t language);
     void setStartupDisplay();
 
-    DisplayGraphicDiagramClass& Diagram();
-
     bool enablePowerSafe = true;
     bool enableScreensaver = true;
 
@@ -38,23 +35,28 @@ private:
     void calcLineHeights();
     void setFont(const uint8_t line);
     bool isValidDisplay();
+    bool isHallDetected();
 
     Task _loopTask;
 
     U8G2* _display;
-    DisplayGraphicDiagramClass _diagram;
 
     bool _displayTurnedOn;
 
     DisplayType_t _display_type = DisplayType_t::None;
     uint8_t _display_language = DISPLAY_LANGUAGE;
     uint8_t _mExtra;
+    uint8_t _actSensorIndex;
+    uint8_t _actPageTime;
     uint16_t _period = 1000;
     uint16_t _interval = 60000; // interval at which to power save (milliseconds)
+    uint32_t _lastDisplayUpdate = 0;
     uint32_t _previousMillis = 0;
-    char _fmtText[32];
+    char _fmtText[50];
     bool _isLarge = false;
     uint8_t _lineOffsets[5];
+    int _hallFifoData[16]; // measure hall sensor and switch on display
+    int _hallIndex;
 };
 
 extern DisplayGraphicClass Display;

@@ -11,7 +11,7 @@
                 <span v-else class="text-warning">
                     <BIconSun width="30" height="30" class="d-inline-block align-text-top" />
                 </span>
-                 OpenDTU
+                TemperatureLogger
             </router-link>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAltMarkup"
                 aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,15 +38,12 @@
                                 <router-link @click="onClick" class="dropdown-item" to="/settings/mqtt">{{ $t('menu.MQTTSettings') }}</router-link>
                             </li>
                             <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/inverter">{{ $t('menu.InverterSettings') }}
+                                <router-link @click="onClick" class="dropdown-item" to="/settings/templogger">{{ $t('menu.TempLoggerSettings') }}
                                 </router-link>
                             </li>
                             <li>
                                 <router-link @click="onClick" class="dropdown-item" to="/settings/security">{{ $t('menu.SecuritySettings') }}
                                 </router-link>
-                            </li>
-                            <li>
-                                <router-link @click="onClick" class="dropdown-item" to="/settings/dtu">{{ $t('menu.DTUSettings') }}</router-link>
                             </li>
                             <li>
                                 <router-link @click="onClick" class="dropdown-item" to="/settings/device">{{ $t('menu.DeviceManager') }}</router-link>

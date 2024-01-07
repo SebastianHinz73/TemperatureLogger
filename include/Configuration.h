@@ -22,35 +22,17 @@
 #define MQTT_MAX_LWTVALUE_STRLEN 20
 #define MQTT_MAX_CERT_STRLEN 2560
 
-#define INV_MAX_NAME_STRLEN 31
-#define INV_MAX_COUNT 10
-#define INV_MAX_CHAN_COUNT 6
-
-#define CHAN_MAX_NAME_STRLEN 31
+#define TEMPLOGGER_MAX_SENSORNAME_STRLEN 31
+#define TEMPLOGGER_MAX_COUNT 30
 
 #define DEV_MAX_MAPPING_NAME_STRLEN 63
 
 #define JSON_BUFFER_SIZE 12288
 
-struct CHANNEL_CONFIG_T {
-    uint16_t MaxChannelPower;
-    char Name[CHAN_MAX_NAME_STRLEN];
-    float YieldTotalOffset;
-};
-
-struct INVERTER_CONFIG_T {
-    uint64_t Serial;
-    char Name[INV_MAX_NAME_STRLEN + 1];
-    uint8_t Order;
-    bool Poll_Enable;
-    bool Poll_Enable_Night;
-    bool Command_Enable;
-    bool Command_Enable_Night;
-    uint8_t ReachableThreshold;
-    bool ZeroRuntimeDataIfUnrechable;
-    bool ZeroYieldDayOnMidnight;
-    bool YieldDayCorrection;
-    CHANNEL_CONFIG_T channel[INV_MAX_CHAN_COUNT];
+struct DS18B20SENSOR_CONFIG_T {
+    uint16_t Serial;
+    bool Connected;
+    char Name[TEMPLOGGER_MAX_SENSORNAME_STRLEN + 1];
 };
 
 struct CONFIG_T {
@@ -121,16 +103,10 @@ struct CONFIG_T {
     } Mqtt;
 
     struct {
-        uint64_t Serial;
         uint32_t PollInterval;
-        struct {
-            uint8_t PaLevel;
-        } Nrf;
-        struct {
-            int8_t PaLevel;
-            uint32_t Frequency;
-        } Cmt;
-    } Dtu;
+        bool Fahrenheit;
+        DS18B20SENSOR_CONFIG_T Sensors[TEMPLOGGER_MAX_COUNT];
+    } DS18B20;
 
     struct {
         char Password[WIFI_MAX_PASSWORD_STRLEN + 1];
@@ -146,11 +122,6 @@ struct CONFIG_T {
         uint32_t DiagramDuration;
     } Display;
 
-    struct {
-        uint8_t Brightness;
-    } Led_Single[PINMAPPING_LED_COUNT];
-
-    INVERTER_CONFIG_T Inverter[INV_MAX_COUNT];
     char Dev_PinMapping[DEV_MAX_MAPPING_NAME_STRLEN + 1];
 };
 
@@ -162,8 +133,9 @@ public:
     void migrate();
     CONFIG_T& get();
 
-    INVERTER_CONFIG_T* getFreeInverterSlot();
-    INVERTER_CONFIG_T* getInverterConfig(const uint64_t serial);
+    DS18B20SENSOR_CONFIG_T* getFirstDS18B20Config();
+    uint32_t getConfiguredSensorCnt();
+    bool addSensor(uint16_t serial);
 };
 
 extern ConfigurationClass Configuration;

@@ -3,7 +3,9 @@
  * Copyright (C) 2023 Thomas Basler and others
  */
 #include "Display_Graphic.h"
+#include "Configuration.h"
 #include "Datastore.h"
+#include "MessageOutput.h"
 #include <NetworkSettings.h>
 #include <map>
 #include <time.h>
@@ -27,15 +29,15 @@ const uint8_t languages[] = {
     I18N_LOCALE_FR
 };
 
-static const char* const i18n_offline[] = { "Offline", "Offline", "Offline" };
-static const char* const i18n_current_power_w[] = { "%3.0f W", "%3.0f W", "%3.0f W" };
-static const char* const i18n_current_power_kw[] = { "%2.1f kW", "%2.1f kW", "%2.1f kW" };
-static const char* const i18n_yield_today_wh[] = { "today: %4.0f Wh", "Heute: %4.0f Wh", "auj.: %4.0f Wh" };
-static const char* const i18n_yield_total_kwh[] = { "total: %.1f kWh", "Ges.: %.1f kWh", "total: %.1f kWh" };
 static const char* const i18n_date_format[] = { "%m/%d/%Y %H:%M", "%d.%m.%Y %H:%M", "%d/%m/%Y %H:%M" };
 
 DisplayGraphicClass::DisplayGraphicClass()
 {
+    _actSensorIndex = 0;
+    _actPageTime = 0;
+
+    memset((char*)&_hallFifoData[0], 0, sizeof(_hallFifoData));
+    _hallIndex = 0;
 }
 
 DisplayGraphicClass::~DisplayGraphicClass()
@@ -52,7 +54,6 @@ void DisplayGraphicClass::init(Scheduler& scheduler, const DisplayType_t type, c
         _display->begin();
         setContrast(DISPLAY_CONTRAST);
         setStatus(true);
-        _diagram.init(scheduler, _display);
 
         scheduler.addTask(_loopTask);
         _loopTask.setCallback(std::bind(&DisplayGraphicClass::loop, this));
@@ -75,9 +76,9 @@ void DisplayGraphicClass::calcLineHeights()
 void DisplayGraphicClass::setFont(const uint8_t line)
 {
     switch (line) {
-    case 0:
-        _display->setFont((_isLarge) ? u8g2_font_ncenB14_tr : u8g2_font_logisoso16_tr);
-        break;
+    // case 0:
+    //     _display->setFont((_isLarge) ? u8g2_font_ncenB14_tr : u8g2_font_logisoso16_tr);
+    //     break;
     case 3:
         _display->setFont(u8g2_font_5x8_tr);
         break;
@@ -96,9 +97,9 @@ void DisplayGraphicClass::printText(const char* text, const uint8_t line)
 {
     uint8_t dispX;
     if (!_isLarge) {
-        dispX = (line == 0) ? 5 : 0;
+        dispX = 0;
     } else {
-        dispX = (line == 0) ? 10 : 5;
+        dispX = 5;
     }
     setFont(line);
 
@@ -143,13 +144,8 @@ void DisplayGraphicClass::setStartupDisplay()
     }
 
     _display->clearBuffer();
-    printText("OpenDTU!", 0);
+    printText("Starting ...", 0);
     _display->sendBuffer();
-}
-
-DisplayGraphicDiagramClass& DisplayGraphicClass::Diagram()
-{
-    return _diagram;
 }
 
 void DisplayGraphicClass::loop()
@@ -159,60 +155,70 @@ void DisplayGraphicClass::loop()
     _display->clearBuffer();
     bool displayPowerSave = false;
 
-    //=====> Actual Production ==========
-    if (Datastore.getIsAtLeastOneReachable()) {
-        displayPowerSave = false;
-        if (_isLarge) {
-            uint8_t screenSaverOffsetX = enableScreensaver ? (_mExtra % 7) : 0;
-            _diagram.redraw(screenSaverOffsetX);
-        }
-        const float watts = Datastore.getTotalAcPowerEnabled();
-        if (watts > 999) {
-            snprintf(_fmtText, sizeof(_fmtText), i18n_current_power_kw[_display_language], watts / 1000);
-        } else {
-            snprintf(_fmtText, sizeof(_fmtText), i18n_current_power_w[_display_language], watts);
-        }
-        printText(_fmtText, 0);
+    if (isHallDetected()) {
         _previousMillis = millis();
     }
-    //<=======================
+#if 0
+    if ((millis() - _lastDisplayUpdate) > _period) {
 
-    //=====> Offline ===========
-    else {
-        printText(i18n_offline[_display_language], 0);
+        _display->clearBuffer();
+        bool displayPowerSave = false;
+
+        CONFIG_T& config = Configuration.get();
+
+        uint32_t u32time;
+        float value = 0;
+
+        uint8_t line = 0;
+        uint8_t sensorIndex = _actSensorIndex;
+        while (line < 3) {
+            if (config.DS18B20.Sensors[sensorIndex].Serial != 0) {
+                if (Datastore.getTemperature(config.DS18B20.Sensors[sensorIndex].Serial, u32time, value)) {
+                    snprintf(_fmtText, sizeof(_fmtText), "%.2f %s", value, config.DS18B20.Sensors[sensorIndex].Name);
+                } else {
+                    snprintf(_fmtText, sizeof(_fmtText), "??? %s", config.DS18B20.Sensors[sensorIndex].Name);
+                }
+                printText(_fmtText, line);
+                line++;
+            }
+            sensorIndex = (sensorIndex + 1) % TEMPLOGGER_MAX_COUNT;
+
+            // restart
+            if (sensorIndex == 0) {
+                break;
+            }
+        }
+        _actPageTime = (_actPageTime + 1) % 3;
+        if (_actPageTime == 0) {
+            _actSensorIndex = sensorIndex;
+        }
+
+        //=====> IP or Date-Time ========
+        if (!(_mExtra % 10) && NetworkSettings.localIP()) {
+            printText(NetworkSettings.localIP().toString().c_str(), 3);
+        } else {
+            // Get current time
+            time_t now = time(nullptr);
+            strftime(_fmtText, sizeof(_fmtText), i18n_date_format[_display_language], localtime(&now));
+            printText(_fmtText, 3);
+        }
+        _display->sendBuffer();
+
+        _mExtra++;
+        _lastDisplayUpdate = millis();
+
         // check if it's time to enter power saving mode
         if (millis() - _previousMillis >= (_interval * 2)) {
             displayPowerSave = enablePowerSafe;
         }
+
+        if (!_displayTurnedOn) {
+            displayPowerSave = true;
+        }
+
+        _display->setPowerSave(displayPowerSave);
     }
-    //<=======================
-
-    //=====> Today & Total Production =======
-    snprintf(_fmtText, sizeof(_fmtText), i18n_yield_today_wh[_display_language], Datastore.getTotalAcYieldDayEnabled());
-    printText(_fmtText, 1);
-
-    snprintf(_fmtText, sizeof(_fmtText), i18n_yield_total_kwh[_display_language], Datastore.getTotalAcYieldTotalEnabled());
-    printText(_fmtText, 2);
-    //<=======================
-
-    //=====> IP or Date-Time ========
-    if (!(_mExtra % 10) && NetworkSettings.localIP()) {
-        printText(NetworkSettings.localIP().toString().c_str(), 3);
-    } else {
-        // Get current time
-        time_t now = time(nullptr);
-        strftime(_fmtText, sizeof(_fmtText), i18n_date_format[_display_language], localtime(&now));
-        printText(_fmtText, 3);
-    }
-    _display->sendBuffer();
-
-    _mExtra++;
-
-    if (!_displayTurnedOn) {
-        displayPowerSave = true;
-    }
-
-    _display->setPowerSave(displayPowerSave);
+#endif
 }
 
 void DisplayGraphicClass::setContrast(const uint8_t contrast)
@@ -226,6 +232,30 @@ void DisplayGraphicClass::setContrast(const uint8_t contrast)
 void DisplayGraphicClass::setStatus(const bool turnOn)
 {
     _displayTurnedOn = turnOn;
+}
+
+//////////////////////////////////////////////////////////////////////
+bool DisplayGraphicClass::isHallDetected()
+{
+    u32_t Size = sizeof(_hallFifoData) / sizeof(int);
+
+    _hallFifoData[_hallIndex] = hallRead(); // Reads Hall sensor value
+    _hallIndex = (_hallIndex + 1) % Size;
+
+    int detect = 0;
+    for (int i = 0; i < Size; i++) {
+        if (_hallFifoData[i] < -10) {
+            detect++;
+        }
+    }
+
+    detect = detect > (0.5 * Size);
+    if (detect) {
+        memset((char*)&_hallFifoData[0], 0, sizeof(_hallFifoData));
+        _hallIndex = 0;
+    }
+
+    return detect;
 }
 
 DisplayGraphicClass Display;

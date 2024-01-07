@@ -85,12 +85,6 @@ void WebApiDeviceClass::onDeviceAdminGet(AsyncWebServerRequest* request)
     display["language"] = config.Display.Language;
     display["diagramduration"] = config.Display.DiagramDuration;
 
-    auto leds = root.createNestedArray("led");
-    for (uint8_t i = 0; i < PINMAPPING_LED_COUNT; i++) {
-        auto led = leds.createNestedObject();
-        led["brightness"] = config.Led_Single[i].Brightness;
-    }
-
     response->setLength();
     request->send(response);
 }
@@ -163,17 +157,11 @@ void WebApiDeviceClass::onDeviceAdminPost(AsyncWebServerRequest* request)
     config.Display.Language = root["display"]["language"].as<uint8_t>();
     config.Display.DiagramDuration = root["display"]["diagramduration"].as<uint32_t>();
 
-    for (uint8_t i = 0; i < PINMAPPING_LED_COUNT; i++) {
-        config.Led_Single[i].Brightness = root["led"][i]["brightness"].as<uint8_t>();
-        config.Led_Single[i].Brightness = min<uint8_t>(100, config.Led_Single[i].Brightness);
-    }
-
     Display.setOrientation(config.Display.Rotation);
     Display.enablePowerSafe = config.Display.PowerSafe;
     Display.enableScreensaver = config.Display.ScreenSaver;
     Display.setContrast(config.Display.Contrast);
     Display.setLanguage(config.Display.Language);
-    Display.Diagram().updatePeriod();
 
     WebApi.writeConfig(retMsg);
 

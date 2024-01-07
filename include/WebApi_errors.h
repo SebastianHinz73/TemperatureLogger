@@ -10,11 +10,9 @@ enum WebApiError {
     GenericValueMissing,
     GenericWriteFailed,
 
-    DtuBase = 2000,
-    DtuSerialZero,
-    DtuPollZero,
-    DtuInvalidPowerLevel,
-    DtuInvalidCmtFrequency,
+    DS18B20Base = 2000,
+    DS18B20BasePollIntervallToSmall,
+    DS18B20BasePollIntervallToBig,
 
     ConfigBase = 3000,
     ConfigNotDeleted,

@@ -36,24 +36,6 @@
                             <td>{{ ntpDataList.ntp_localtime }}</td>
                         </tr>
 
-                        <tr>
-                            <th>{{ $t('ntpinfo.Sunrise') }}</th>
-                            <td v-if="ntpDataList.sun_isSunsetAvailable">{{ ntpDataList.sun_risetime }}</td>
-                            <td v-else>{{ $t('ntpinfo.NotAvailable') }}</td>
-                        </tr>
-                        <tr>
-                            <th>{{ $t('ntpinfo.Sunset') }}</th>
-                            <td v-if="ntpDataList.sun_isSunsetAvailable">{{ ntpDataList.sun_settime }}</td>
-                            <td v-else>{{ $t('ntpinfo.NotAvailable') }}</td>
-                        </tr>
-                        <tr>
-                            <th>{{ $t('ntpinfo.Mode') }}</th>
-                            <td>
-                                <StatusBadge :status="ntpDataList.sun_isDayPeriod"
-                                    true_text="ntpinfo.Day" true_class="text-bg-warning"
-                                    false_text="ntpinfo.Night" false_class="text-bg-dark" />
-                            </td>
-                        </tr>
                     </tbody>
                 </table>
             </div>
