@@ -47,7 +47,6 @@ void DS18B20ListClass::init(Scheduler& scheduler)
         config.DS18B20.Sensors[i].Connected = false;
     }
 
-
     MessageOutput.print("Initialize DS18B20 ... ");
 
     _ow.begin(ONEWIRE_PIN);

@@ -7,6 +7,7 @@
 #include "NetworkSettings.h"
 #include "Utils.h"
 #include "defaults.h"
+#include "Datastore.h"
 
 MqttHandleHassClass MqttHandleHass;
 
@@ -42,7 +43,6 @@ void MqttHandleHassClass::forceUpdate()
 
 void MqttHandleHassClass::publishConfig()
 {
-#if 0
     if (!Configuration.get().Mqtt.Hass.Enabled) {
         return;
     }
@@ -64,10 +64,8 @@ void MqttHandleHassClass::publishConfig()
         }
         publishSensor(config.DS18B20.Sensors[i]);
     }
-#endif
 }
 
-#if 0
 void MqttHandleHassClass::publishSensor(const DS18B20SENSOR_CONFIG_T& sensorConfig)
 {
     const CONFIG_T& config = Configuration.get();
@@ -80,7 +78,7 @@ void MqttHandleHassClass::publishSensor(const DS18B20SENSOR_CONFIG_T& sensorConf
     root["uniq_id"] = _macAddr + "_" + String(sensorConfig.Serial, 16) + "_temperature";
     root["unit_of_meas"] = config.DS18B20.Fahrenheit ? "�F" : "�C";
 
-    if (config.Mqtt_Hass_Expire) {
+    if (config.Mqtt.Hass.Expire) {
         root["exp_aft"] = 1.5 * config.DS18B20.PollInterval;
     }
     root["dev_cla"] = "temperature";
@@ -91,7 +89,7 @@ void MqttHandleHassClass::publishSensor(const DS18B20SENSOR_CONFIG_T& sensorConf
 
     publish(configTopic, buffer);
 }
-#endif
+
 void MqttHandleHassClass::publish(const String& subtopic, const String& payload)
 {
     String topic = Configuration.get().Mqtt.Hass.Topic;

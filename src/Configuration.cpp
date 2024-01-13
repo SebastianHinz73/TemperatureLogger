@@ -73,7 +73,7 @@ bool ConfigurationClass::write()
     templogger["pollinterval"] = config.DS18B20.PollInterval;
     templogger["fahrenheit"] = config.DS18B20.Fahrenheit;
 
-    JsonArray sensors = doc.createNestedArray("sensors");
+    JsonArray sensors = templogger.createNestedArray("sensors");
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         JsonObject sensor = sensors.createNestedObject();
         sensor["serial"] = config.DS18B20.Sensors[i].Serial;
@@ -215,7 +215,7 @@ bool ConfigurationClass::read()
     config.DS18B20.PollInterval = templogger["pollinterval"] | TEMPLOGGER_DS18B20_POLL_INTERVAL;
     config.DS18B20.Fahrenheit = templogger["fahrenheit"] | TEMPLOGGER_DS18B20_FAHRENHEIT;
 
-    JsonArray sensors = doc["sensors"];
+    JsonArray sensors = templogger["sensors"];
 
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         JsonObject sensor = sensors[i].as<JsonObject>();

@@ -78,7 +78,6 @@ export default defineComponent({
 
             this.socket.onmessage = (event) => {
                 if (event.data != "{}") {
-                    console.log(event.data);
                     this.liveData = JSON.parse(event.data);
                     this.dataLoading = false;
                     this.heartCheck(); // Reset heartbeat detection

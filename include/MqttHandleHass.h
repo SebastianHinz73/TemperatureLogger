@@ -12,7 +12,7 @@ public:
 
 private:
     void loop();
-    // void publishSensor(const DS18B20SENSOR_CONFIG_T& sensorConfig);
+    void publishSensor(const DS18B20SENSOR_CONFIG_T& sensorConfig);
     void publish(const String& subtopic, const String& payload);
 
     Task _loopTask;

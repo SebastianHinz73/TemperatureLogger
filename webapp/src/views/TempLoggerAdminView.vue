@@ -54,7 +54,7 @@
                 </div>
             </CardElement>
 
-            <button type="submit" class="btn btn-primary mb-3">{{ $t('temploggeradmin.Save') }}</button>
+            <FormFooter @reload="getTempLoggerConfig" />
         </form>
 
     </BasePage>
@@ -112,6 +112,7 @@
 import BasePage from '@/components/BasePage.vue';
 import BootstrapAlert from "@/components/BootstrapAlert.vue";
 import CardElement from '@/components/CardElement.vue';
+import FormFooter from '@/components/FormFooter.vue';
 import InputElement from '@/components/InputElement.vue';
 import type { DS18B20Info, TempLoggerConfig } from "@/types/TempLoggerConfig";
 import Sortable from 'sortablejs';
@@ -139,6 +140,7 @@ export default defineComponent({
         BasePage,
         BootstrapAlert,
         CardElement,
+        FormFooter,
         InputElement,
         BIconPencil,
         BIconTrash,
@@ -175,7 +177,6 @@ export default defineComponent({
                 .then((data) => {
                     this.tempLoggerConfigList = data;
                     this.dataLoading = false;
-                    console.log(this.tempLoggerConfigList);
                     this.$nextTick(() => {
                         const table = this.$refs.invList as HTMLElement;
 

@@ -11,11 +11,11 @@
 #include "helper.h"
 #include <AsyncJson.h>
 
-void WebApiTempLoggerClass::init(AsyncWebServer* server)
+void WebApiTempLoggerClass::init(AsyncWebServer& server)
 {
     using std::placeholders::_1;
 
-    _server = server;
+    _server = &server;
 
     _server->on("/api/templogger/config", HTTP_GET, std::bind(&WebApiTempLoggerClass::onTempLoggerAdminGet, this, _1));
     _server->on("/api/templogger/config", HTTP_POST, std::bind(&WebApiTempLoggerClass::onTempLoggerAdminPost, this, _1));
@@ -25,14 +25,35 @@ void WebApiTempLoggerClass::loop()
 {
 }
 
+void generateJsonResponse(JsonVariant& root)
+{
+    const CONFIG_T& config = Configuration.get();
+    auto tempArray = root.createNestedArray("temperatures");
+
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        if (config.DS18B20.Sensors[i].Serial == 0) {
+            continue;
+        }
+        uint32_t time;
+        float value;
+        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
+
+        JsonObject tempObj = tempArray.createNestedObject();
+        tempObj["valid"] = valid;
+        tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
+        tempObj["name"] = config.DS18B20.Sensors[i].Name;
+        tempObj["time"] = valid ? time : 0;
+        tempObj["value"] = valid ? value : 0;
+    }
+}
+
 void WebApiTempLoggerClass::onTempLoggerAdminGet(AsyncWebServerRequest* request)
 {
     if (!WebApi.checkCredentials(request)) {
         return;
     }
-
     AsyncJsonResponse* response = new AsyncJsonResponse(false, 128 * (1 + Configuration.getConfiguredSensorCnt()));
-    JsonObject root = response->getRoot();
+    auto& root = response->getRoot();
     const CONFIG_T& config = Configuration.get();
 
     root["pollinterval"] = config.DS18B20.PollInterval;

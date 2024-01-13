@@ -158,7 +158,7 @@ void DisplayGraphicClass::loop()
     if (isHallDetected()) {
         _previousMillis = millis();
     }
-#if 0
+
     if ((millis() - _lastDisplayUpdate) > _period) {
 
         _display->clearBuffer();
@@ -218,7 +218,6 @@ void DisplayGraphicClass::loop()
 
         _display->setPowerSave(displayPowerSave);
     }
-#endif
 }
 
 void DisplayGraphicClass::setContrast(const uint8_t contrast)

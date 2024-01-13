@@ -21,6 +21,7 @@ void WebApiClass::init(Scheduler& scheduler)
     _webApiFirmware.init(_server);
     _webApiMaintenance.init(_server);
     _webApiMqtt.init(_server);
+    _webApiTempLogger.init(_server);
     _webApiNetwork.init(_server);
     _webApiNtp.init(_server);
     _webApiPower.init(_server);
@@ -28,6 +29,7 @@ void WebApiClass::init(Scheduler& scheduler)
     _webApiSysstatus.init(_server);
     _webApiWebapp.init(_server);
     _webApiWsConsole.init(_server);
+    _webApiIotSensorData.init(_server);
     _webApiWsLive.init(_server);
 
     _server.begin();

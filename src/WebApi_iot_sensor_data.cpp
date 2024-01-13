@@ -13,11 +13,11 @@
 #include <AsyncJson.h>
 
 
-void WebApiIotSensorData::init(AsyncWebServer* server)
+void WebApiIotSensorData::init(AsyncWebServer& server)
 {
     using std::placeholders::_1;
 
-    _server = server;
+    _server = &server;
 
     _server->on("/config", HTTP_GET, std::bind(&WebApiIotSensorData::onConfig, this, _1));
     _server->on("/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
