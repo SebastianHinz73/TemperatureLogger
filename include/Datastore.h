@@ -34,7 +34,6 @@ public:
 
     void addSensor(uint16_t serial);
     void addValue(uint16_t serial, float value);
-    uint16_t getSensorCnt() { return _list.size(); }
 
     bool getTemperature(uint16_t serial, uint32_t& time, float& value);
     bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);

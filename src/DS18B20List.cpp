@@ -5,10 +5,10 @@
 
 #include "DS18B20List.h"
 #include "Configuration.h"
+#include "Crc16.h"
 #include "Datastore.h"
 #include "MessageOutput.h"
 #include "PinMapping.h"
-#include "crc16.h"
 #include <AsyncJson.h>
 
 #define ONEWIRE_PIN 25 // OneWire Dallas sensors are connected to this pin

@@ -52,7 +52,10 @@ void WebApiWsLiveClass::loop()
 
     bool bValueChanged = false;
     const CONFIG_T& config = Configuration.get();
-    for (uint8_t i = 0; !bValueChanged && i < Datastore.getSensorCnt(); i++) {
+    for (uint8_t i = 0; !bValueChanged && i < Configuration.getConfiguredSensorCnt(); i++) {
+        if (!config.DS18B20.Sensors[i].Connected) {
+            continue;
+        }
         bValueChanged |= Datastore.valueChanged(config.DS18B20.Sensors[i].Serial);
     }
 

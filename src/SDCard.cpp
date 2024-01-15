@@ -65,7 +65,6 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
         MessageOutput.println("SD card: Get timeinfo failed.");
         return;
     }
-    MessageOutput.println("SDCardClass::Openfile");
 
     File file;
     if (!openFile(serial, timeinfo, FILE_APPEND, file)) {
@@ -76,7 +75,6 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
     if (!file.printf("%02d:%02d:%02d;%.2f\n", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, value)) {
         MessageOutput.println("SD card: Append failed");
     }
-    MessageOutput.println("SDCardClass::file.close");
     file.close();
 }
 
@@ -86,13 +84,12 @@ bool SDCardClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
         MessageOutput.println("SD card: getFileSize invalid state.");
         return false;
     }
-    MessageOutput.println("SDCardClass::getFileSize");
 
     File file;
     if (!openFile(serial, timeinfo, FILE_READ, file)) {
         return false;
     }
-    MessageOutput.println("SDCardClass::file.size");
+
     size = file.size();
     file.close();
 
@@ -105,7 +102,6 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, char* buffer, siz
         MessageOutput.println("SD card: getFile invalid state.");
         return false;
     }
-     MessageOutput.println("SDCardClass::getFile");
 
     File file;
     if (!openFile(serial, timeinfo, FILE_READ, file)) {

@@ -43,7 +43,7 @@ void MqttHandleDS18B20Class::loop()
             MqttSettings.publish("logger/bssid", String(WiFi.BSSIDstr()));
         }
 
-        for (uint8_t i = 0; i < Datastore.getSensorCnt(); i++) {
+        for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
             if (!config.DS18B20.Sensors[i].Connected) {
                 continue;
             }
@@ -52,6 +52,7 @@ void MqttHandleDS18B20Class::loop()
             Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
 
             MqttSettings.publish(_macAddr + "/" + String(config.DS18B20.Sensors[i].Serial, 16), String(value));
+            MessageOutput.printf("MQTT %s -> %s\r\n", String(config.DS18B20.Sensors[i].Serial, 16).c_str(), String(value));
         }
 
         _lastPublish = millis();

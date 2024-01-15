@@ -3,11 +3,11 @@
  * Copyright (C) 2022-2023 Thomas Basler and others
  */
 #include "MqttHandleHass.h"
+#include "Datastore.h"
 #include "MqttSettings.h"
 #include "NetworkSettings.h"
 #include "Utils.h"
 #include "defaults.h"
-#include "Datastore.h"
 
 MqttHandleHassClass MqttHandleHass;
 
@@ -58,7 +58,7 @@ void MqttHandleHassClass::publishConfig()
     }
 
     const CONFIG_T& config = Configuration.get();
-    for (uint8_t i = 0; i < Datastore.getSensorCnt(); i++) {
+    for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
         if (!config.DS18B20.Sensors[i].Connected) {
             continue;
         }
@@ -76,7 +76,7 @@ void MqttHandleHassClass::publishSensor(const DS18B20SENSOR_CONFIG_T& sensorConf
     root["name"] = sensorConfig.Name;
     root["stat_t"] = MqttSettings.getPrefix() + _macAddr + "/" + String(sensorConfig.Serial, 16);
     root["uniq_id"] = _macAddr + "_" + String(sensorConfig.Serial, 16) + "_temperature";
-    root["unit_of_meas"] = config.DS18B20.Fahrenheit ? "�F" : "�C";
+    root["unit_of_meas"] = config.DS18B20.Fahrenheit ? "°F" : "°C";
 
     if (config.Mqtt.Hass.Expire) {
         root["exp_aft"] = 1.5 * config.DS18B20.PollInterval;
