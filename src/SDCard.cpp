@@ -56,6 +56,8 @@ void SDCardClass::scanCard()
 
 void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
 {
+    std::lock_guard<std::mutex> lock(_mutex);
+
     if (_state != SDCardState_t::InitOk) {
         MessageOutput.println("SD card: writeValue invalid state.");
         return;
@@ -80,6 +82,8 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
 
 bool SDCardClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
 {
+    std::lock_guard<std::mutex> lock(_mutex);
+
     if (_state != SDCardState_t::InitOk) {
         MessageOutput.println("SD card: getFileSize invalid state.");
         return false;
@@ -96,26 +100,30 @@ bool SDCardClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
     return true;
 }
 
-bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, char* buffer, size_t& size)
+bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
 {
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize) -> size_t {
+        size_t ret = _file.readBytes((char*)buffer, maxLen);
+        if (ret != maxLen) {
+            MessageOutput.println("SD card: unexpected ret != size.");
+        }
+        if (fileSize - alreadySent - maxLen <= 0) {
+            _file.close();
+            _mutex.unlock(); // TODO what if responseFiller is not called untill file end?
+        }
+        return ret;
+    };
+
     if (_state != SDCardState_t::InitOk) {
         MessageOutput.println("SD card: getFile invalid state.");
         return false;
     }
 
-    File file;
-    if (!openFile(serial, timeinfo, FILE_READ, file)) {
+    if (!openFile(serial, timeinfo, FILE_READ, _file)) {
         return false;
     }
-    size_t ret = file.readBytes(buffer, size);
-    if (ret != size) {
-        MessageOutput.println("SD card: unexpected ret != size.");
-        if (ret < size) {
-            size = ret;
-        }
-    }
-    file.close();
 
+    _mutex.lock();
     return true;
 }
 

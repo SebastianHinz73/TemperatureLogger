@@ -6,12 +6,15 @@
 #include "SPI.h"
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
+#include <mutex>
 
 enum SDCardState_t {
     Init,
     InitOk,
     InitFailure,
 };
+
+typedef std::function<size_t(uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize)> ResponseFiller;
 
 ////////////////////////
 
@@ -22,10 +25,9 @@ public:
     void loop();
     static bool getTmTime(struct tm* info, time_t time, uint32_t ms);
 
-protected:
     void writeValue(uint16_t serial, time_t time, float value);
     bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
-    bool getFile(uint16_t serial, const tm& timeinfo, char* buffer, size_t& size);
+    bool getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
 
 private:
     void scanCard();
@@ -37,6 +39,7 @@ private:
     uint32_t _lastActionTime;
     SDCardState_t _state;
 
-    friend class DatastoreClass; // for using addValue, getFileSize, getFile (use mutex from DatastoreClass)
+    File _file; // used by getFile
+    std::mutex _mutex;
 };
 extern SDCardClass SDCard;

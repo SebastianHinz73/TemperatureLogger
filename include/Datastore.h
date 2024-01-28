@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
+#include "SDCard.h"
 #include <CircularBuffer.h>
 #include <TaskSchedulerDeclarations.h>
 #include <TimeoutHelper.h>
@@ -37,7 +38,7 @@ public:
 
     bool getTemperature(uint16_t serial, uint32_t& time, float& value);
     bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
-    bool getTemperatureFile(uint16_t serial, const tm& timeinfo, char* buffer, size_t& size);
+    bool getTemperatureFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
     bool valueChanged(uint16_t serial);
 
 private:

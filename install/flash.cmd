@@ -96,7 +96,7 @@ goto :loop
 
 :TemperatureLogger
 @echo on
-esptool.exe -p %COMPORT% --chip esp32 write_flash 0x0 bin\firmware.factory.bin
+esptool.exe -p %COMPORT% --chip esp32 write_flash 0x0 firmware.factory.bin
 
 @echo off
 echo.

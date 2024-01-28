@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
+#include "Configuration.h"
 #include <DallasTemperature.h>
 #include <OneWire.h>
+#include <TaskSchedulerDeclarations.h>
 #include <cstdint>
 #include <memory>
 #include <vector>
-#include <TaskSchedulerDeclarations.h>
-#include "Configuration.h"
 
-class DS18B20
-{
+#define TEMP_LOGGER_VERSION "2.0.0Beta"
+
+class DS18B20 {
 public:
-    DS18B20(const DeviceAddress &addr, uint16_t serial)
+    DS18B20(const DeviceAddress& addr, uint16_t serial)
     {
         memcpy(&_addr, addr, sizeof(_addr));
         _serial = serial;
@@ -25,10 +26,9 @@ public:
 
 ////////////////////////
 
-class DS18B20ListClass
-{
+class DS18B20ListClass {
 public:
-    DS18B20ListClass() {}
+    DS18B20ListClass() { }
     void init(Scheduler& scheduler);
     void loop();
 

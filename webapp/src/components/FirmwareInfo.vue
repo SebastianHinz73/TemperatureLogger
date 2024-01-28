@@ -17,10 +17,14 @@
                     </tr>
                     <tr>
                         <th>{{ $t('firmwareinfo.FirmwareVersion') }}</th>
-                        <td><a :href="versionInfoUrl"
-                                target="_blank" v-tooltip :title="$t('firmwareinfo.FirmwareVersionHint')">
+                        <td><a :href="versionInfoUrl" target="_blank" v-tooltip
+                                :title="$t('firmwareinfo.FirmwareVersionHint')">
                                 {{ systemStatus.git_hash }}
                             </a></td>
+                    </tr>
+                    <tr>
+                        <th>{{ $t('firmwareinfo.TemploggerVersion') }}</th>
+                        <td>{{ systemStatus.templogger_version }}</td>
                     </tr>
                     <tr>
                         <th>{{ $t('firmwareinfo.PioEnv') }}</th>

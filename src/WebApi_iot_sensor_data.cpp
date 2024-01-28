@@ -4,14 +4,14 @@
  */
 #include "WebApi_iot_sensor_data.h"
 #include "Configuration.h"
+#include "DS18B20List.h"
 #include "Datastore.h"
-#include "NetworkSettings.h"
 #include "MessageOutput.h"
+#include "NetworkSettings.h"
 #include "SDCard.h"
 #include "WebApi.h"
 #include "defaults.h"
 #include <AsyncJson.h>
-
 
 void WebApiIotSensorData::init(AsyncWebServer& server)
 {
@@ -29,8 +29,6 @@ void WebApiIotSensorData::loop()
 
 void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
 {
-    MessageOutput.print("WebApiIotSensorData: onConfig\r\n");
-
     if (!WebApi.checkCredentialsReadonly(request)) {
         return;
     }
@@ -49,7 +47,7 @@ void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
     }
 
     CONFIG_T& config = Configuration.get();
-    snprintf(buffer, sizeof(buffer), "1;%s;0.9todo;%s;-1\n", NetworkSettingsClass::getHostname().c_str(), bootTime.c_str());
+    snprintf(buffer, sizeof(buffer), "1;%s;%s;%s;-1\n", NetworkSettingsClass::getHostname().c_str(), TEMP_LOGGER_VERSION, bootTime.c_str());
 
     String text = buffer;
 
@@ -71,8 +69,6 @@ void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
 
 void WebApiIotSensorData::onFile(AsyncWebServerRequest* request)
 {
-    MessageOutput.print("WebApiIotSensorData: onFile\r\n");
-
     if (!WebApi.checkCredentialsReadonly(request)) {
         return;
     }
@@ -82,13 +78,7 @@ void WebApiIotSensorData::onFile(AsyncWebServerRequest* request)
         MessageOutput.printf("WebApiIotSensorData: getLocalTime failed. Ignore\r\n");
     }
 
-    DS18B20SENSOR_CONFIG_T* config = Configuration.getFirstDS18B20Config();
-    if (config == nullptr) {
-        request->send(404);
-        return;
-    }
-    uint16_t serial = config->Serial;
-
+    uint16_t serial;
     if (request->hasParam("y")) {
         timeinfo.tm_year = request->getParam("y")->value().toInt() - 1900;
     }
@@ -98,33 +88,32 @@ void WebApiIotSensorData::onFile(AsyncWebServerRequest* request)
     if (request->hasParam("d")) {
         timeinfo.tm_mday = request->getParam("d")->value().toInt();
     }
-    if (request->hasParam("y")) {
+    if (request->hasParam("id")) {
         serial = strtol(request->getParam("id")->value().c_str(), 0, 16);
+    } else {
+        DS18B20SENSOR_CONFIG_T* config = Configuration.getFirstDS18B20Config();
+        if (config == nullptr) {
+            request->send(404);
+            return;
+        }
+        serial = config->Serial;
     }
 
-    size_t size;
-    if (!Datastore.getFileSize(serial, timeinfo, size)) {
+    static size_t fileSize;
+    if (!Datastore.getFileSize(serial, timeinfo, fileSize)) {
         request->send(404);
         return;
     }
 
-    char* buf = new char[size + 1];
-    if (buf == nullptr) {
-        MessageOutput.printf("WebApiIotSensorData: Can not allocate %d bytes.\r\n", size);
-        request->send(404);
-        return;
-    }
-
-    if (!Datastore.getTemperatureFile(serial, timeinfo, buf, size)) {
-        request->send(404);
-        delete[] buf;
+    static ResponseFiller responseFiller;
+    if (!Datastore.getTemperatureFile(serial, timeinfo, responseFiller)) {
         MessageOutput.print("WebApiIotSensorData: Can not get file.\r\n");
         return;
     }
-    buf[size] = 0;
 
-    AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", buf);
+    AsyncWebServerResponse* response = request->beginResponse("text/plain", fileSize, [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+        return responseFiller(buffer, maxLen, alreadySent, fileSize);
+    });
     response->addHeader("Server", "ESP Async Web Server");
     request->send(response);
-    delete[] buf;
 }

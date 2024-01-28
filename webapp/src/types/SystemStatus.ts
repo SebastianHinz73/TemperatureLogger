@@ -10,6 +10,7 @@ export interface SystemStatus {
     config_version: string;
     git_hash: string;
     git_is_hash: boolean;
+    templogger_version: string;
     pioenv: string;
     resetreason_0: string;
     resetreason_1: string;

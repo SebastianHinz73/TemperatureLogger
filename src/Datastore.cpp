@@ -6,7 +6,6 @@
 #include "Configuration.h"
 #include "DS18B20List.h"
 #include "MessageOutput.h"
-#include "SDCard.h"
 
 DatastoreClass Datastore;
 
@@ -147,9 +146,9 @@ bool DatastoreClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& si
     return SDCard.getFileSize(serial, timeinfo, size);
 }
 
-bool DatastoreClass::getTemperatureFile(uint16_t serial, const tm& timeinfo, char* buffer, size_t& size)
+bool DatastoreClass::getTemperatureFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    return SDCard.getFile(serial, timeinfo, buffer, size);
+    return SDCard.getFile(serial, timeinfo, responseFiller);
 }
