@@ -13,6 +13,7 @@
 #include "NetworkSettings.h"
 #include "NtpSettings.h"
 #include "PinMapping.h"
+#include "RamDisk.h"
 #include "SDCard.h"
 #include "Scheduler.h"
 #include "Utils.h"
@@ -101,30 +102,42 @@ void setup()
     WebApi.init(scheduler);
     MessageOutput.println("done");
 
-    // Initialize Display
-    MessageOutput.print("Initialize Display... ");
+    if (static_cast<DisplayType_t>(pin.display_type) != DisplayType_t::None) {
+        // Initialize Display
+        MessageOutput.print("Initialize Display... ");
 
-    Display.init(scheduler, DisplayType_t::SSD1306, 5, 4, -1, 16
-        /*static_cast<DisplayType_t>(pin.display_type),
-        pin.display_data,
-        pin.display_clk,
-        pin.display_cs,
-        pin.display_reset*/
-    );
-    Display.setOrientation(config.Display.Rotation);
-    Display.enablePowerSafe = config.Display.PowerSafe;
-    Display.enableScreensaver = config.Display.ScreenSaver;
-    Display.setContrast(config.Display.Contrast);
-    Display.setLanguage(config.Display.Language);
-    Display.setStartupDisplay();
-    MessageOutput.println("done");
+        Display.init(scheduler,
+            static_cast<DisplayType_t>(pin.display_type),
+            pin.display_data,
+            pin.display_clk,
+            pin.display_cs,
+            pin.display_reset);
+        Display.setOrientation(config.Display.Rotation);
+        Display.enablePowerSafe = config.Display.PowerSafe;
+        Display.enableScreensaver = config.Display.ScreenSaver;
+        Display.setContrast(config.Display.Contrast);
+        Display.setLanguage(config.Display.Language);
+        Display.setStartupDisplay();
+        MessageOutput.println("done");
+    }
 
-    MessageOutput.print("Initialize temperature logger... ");
-    DS18B20List.init(scheduler);
-    SDCard.init(scheduler);
-    MessageOutput.println("done");
+    if (pin.sensor_ds18b20 != -1) {
+        MessageOutput.print("Initialize DS18B20 ... ");
+        DS18B20List.init(scheduler);
+        MessageOutput.println("done");
+    }
 
-    Datastore.init();
+    if (pin.sd_enabled) {
+        MessageOutput.print("Initialize SD card ... ");
+        SDCard.init(scheduler);
+        MessageOutput.println("done");
+    } else {
+        MessageOutput.print("Initialize Ram disk ... ");
+        RamDisk.init();
+        MessageOutput.println("done");
+    }
+
+    Datastore.init(pin.sd_enabled ? static_cast<IDataStoreDevice*>(&SDCard) : static_cast<IDataStoreDevice*>(&RamDisk));
 }
 
 void loop()

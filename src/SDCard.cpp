@@ -5,14 +5,16 @@
 
 #include "SDCard.h"
 #include "MessageOutput.h"
+#include <PinMapping.h>
+#include <Datastore.h>
 
 SDCardClass SDCard;
 
 void SDCardClass::init(Scheduler& scheduler)
 {
-    // const PinMapping_t& pin = PinMapping.get();
+    const PinMapping_t& pin = PinMapping.get();
 
-    SPI.begin(12, 15, 13);
+    SPI.begin(pin.sd_sck, pin.sd_miso, pin.sd_mosi);
     _lastActionTime = millis();
 
     scheduler.addTask(_loopTask);
@@ -43,7 +45,8 @@ void SDCardClass::scanCard()
         MessageOutput.println("Card Mount Failed");
     }
 
-    if (SD.begin(14, SPI)) {
+    const PinMapping_t& pin = PinMapping.get();
+    if (SD.begin(pin.sd_cs, SPI)) {
         if (CARD_NONE == SD.cardType()) {
             _state = SDCardState_t::InitFailure;
             MessageOutput.println("No SD card attached");
@@ -63,7 +66,7 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
         return;
     }
     tm timeinfo;
-    if (!getTmTime(&timeinfo, time, 5)) {
+    if (!Datastore.getTmTime(&timeinfo, time, 5)) {
         MessageOutput.println("SD card: Get timeinfo failed.");
         return;
     }
@@ -125,19 +128,6 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& r
 
     _mutex.lock();
     return true;
-}
-
-bool SDCardClass::getTmTime(struct tm* info, time_t time, uint32_t ms)
-{
-    uint32_t start = millis();
-    while ((millis() - start) <= ms) {
-        localtime_r(&time, info);
-        if (info->tm_year > (2016 - 1900)) {
-            return true;
-        }
-        delay(10);
-    }
-    return false;
 }
 
 bool SDCardClass::openFile(uint16_t serial, const tm timeinfo, const char* mode, File& file)

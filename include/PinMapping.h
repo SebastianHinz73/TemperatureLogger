@@ -12,19 +12,6 @@
 
 struct PinMapping_t {
     char name[MAPPING_NAME_STRLEN + 1];
-    int8_t nrf24_miso;
-    int8_t nrf24_mosi;
-    int8_t nrf24_clk;
-    int8_t nrf24_irq;
-    int8_t nrf24_en;
-    int8_t nrf24_cs;
-
-    int8_t cmt_clk;
-    int8_t cmt_cs;
-    int8_t cmt_fcs;
-    int8_t cmt_gpio2;
-    int8_t cmt_gpio3;
-    int8_t cmt_sdio;
 
     int8_t eth_phy_addr;
     bool eth_enabled;
@@ -33,12 +20,21 @@ struct PinMapping_t {
     int eth_mdio;
     eth_phy_type_t eth_type;
     eth_clock_mode_t eth_clk_mode;
+
     uint8_t display_type;
     uint8_t display_data;
     uint8_t display_clk;
     uint8_t display_cs;
     uint8_t display_reset;
     int8_t led[PINMAPPING_LED_COUNT];
+
+    int sensor_ds18b20;
+
+    bool sd_enabled;
+    int sd_sck;
+    int sd_miso;
+    int sd_mosi;
+    int sd_cs;
 };
 
 class PinMappingClass {
@@ -47,8 +43,6 @@ public:
     bool init(const String& deviceMapping);
     PinMapping_t& get();
 
-    bool isValidNrf24Config() const;
-    bool isValidCmt2300Config() const;
     bool isValidEthConfig() const;
 
 private:

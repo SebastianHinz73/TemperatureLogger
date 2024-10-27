@@ -19,8 +19,9 @@ DatastoreClass Datastore;
     MessageOutput.println();
 
 /////////////////////////
-void DatastoreClass::init()
+void DatastoreClass::init(IDataStoreDevice* device)
 {
+    _device = device;
 }
 
 void DatastoreClass::loop()
@@ -100,7 +101,7 @@ void DatastoreClass::addValue(uint16_t serial, float value)
         // PRINT_VALUES(entry->_times, entry->_values);
 
         if (!bShift && entry->_values.size() > 1) {
-            SDCard.writeValue(serial, entry->_times[1], entry->_values[1]);
+            _device->writeValue(serial, entry->_times[1], entry->_values[1]);
         }
         break;
     }
@@ -139,16 +140,29 @@ bool DatastoreClass::valueChanged(uint16_t serial)
     return false;
 }
 
+bool DatastoreClass::getTmTime(struct tm* info, time_t time, uint32_t ms)
+{
+    uint32_t start = millis();
+    while ((millis() - start) <= ms) {
+        localtime_r(&time, info);
+        if (info->tm_year > (2016 - 1900)) {
+            return true;
+        }
+        delay(10);
+    }
+    return false;
+}
+
 bool DatastoreClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    return SDCard.getFileSize(serial, timeinfo, size);
+    return _device->getFileSize(serial, timeinfo, size);
 }
 
 bool DatastoreClass::getTemperatureFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
-    return SDCard.getFile(serial, timeinfo, responseFiller);
+    return _device->getFile(serial, timeinfo, responseFiller);
 }

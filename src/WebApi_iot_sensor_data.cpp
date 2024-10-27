@@ -8,7 +8,6 @@
 #include "Datastore.h"
 #include "MessageOutput.h"
 #include "NetworkSettings.h"
-#include "SDCard.h"
 #include "WebApi.h"
 #include "defaults.h"
 #include <AsyncJson.h>
@@ -41,7 +40,7 @@ void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
         time_t now = time(nullptr);
         now -= sec_since_boot;
 
-        SDCard.getTmTime(&timeinfo, now, 5);
+        Datastore.getTmTime(&timeinfo, now, 5);
         strftime(buffer, sizeof(buffer), "%Y/%m/%d %H:%M:%S", &timeinfo);
         bootTime = buffer;
     }

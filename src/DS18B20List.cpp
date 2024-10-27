@@ -11,9 +11,8 @@
 #include "PinMapping.h"
 #include <AsyncJson.h>
 
-#define ONEWIRE_PIN 25 // OneWire Dallas sensors are connected to this pin
 #define TEMPERATURE_PRECISION 12
-#define TIME_SCAN_SENSORS 60
+#define TIME_SCAN_NEW_SENSORS 60
 
 DS18B20ListClass DS18B20List;
 
@@ -35,7 +34,7 @@ bool is_eqal(const DeviceAddress& a, const DeviceAddress& b)
 
 void DS18B20ListClass::init(Scheduler& scheduler)
 {
-    // const PinMapping_t& pin = PinMapping.get();
+    const PinMapping_t& pin = PinMapping.get();
 
     scheduler.addTask(_loopTask);
     _loopTask.setCallback(std::bind(&DS18B20ListClass::loop, this));
@@ -47,9 +46,7 @@ void DS18B20ListClass::init(Scheduler& scheduler)
         config.DS18B20.Sensors[i].Connected = false;
     }
 
-    MessageOutput.print("Initialize DS18B20 ... ");
-
-    _ow.begin(ONEWIRE_PIN);
+    _ow.begin(pin.sensor_ds18b20);
     _sensors.setOneWire(&_ow);
     _sensors.begin();
 
@@ -61,7 +58,7 @@ void DS18B20ListClass::init(Scheduler& scheduler)
 
 void DS18B20ListClass::loop()
 {
-    if (millis() - _lastScan > TIME_SCAN_SENSORS * 1000) {
+    if (millis() - _lastScan > TIME_SCAN_NEW_SENSORS * 1000) {
         scanSensors();
         _lastScan = millis();
     }

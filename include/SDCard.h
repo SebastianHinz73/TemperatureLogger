@@ -4,6 +4,7 @@
 #include "FS.h"
 #include "SD.h"
 #include "SPI.h"
+#include "IDataStoreDevice.h"
 #include <Arduino.h>
 #include <TaskSchedulerDeclarations.h>
 #include <mutex>
@@ -14,20 +15,18 @@ enum SDCardState_t {
     InitFailure,
 };
 
-typedef std::function<size_t(uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize)> ResponseFiller;
-
 ////////////////////////
 
-class SDCardClass {
+class SDCardClass : public IDataStoreDevice {
 public:
     SDCardClass() { }
     void init(Scheduler& scheduler);
     void loop();
-    static bool getTmTime(struct tm* info, time_t time, uint32_t ms);
 
-    void writeValue(uint16_t serial, time_t time, float value);
-    bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
-    bool getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
+    // IDataStoreDevice
+    virtual void writeValue(uint16_t serial, time_t time, float value);
+    virtual bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
+    virtual bool getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
 
 private:
     void scanCard();

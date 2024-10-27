@@ -40,22 +40,6 @@ void WebApiDeviceClass::onDeviceAdminGet(AsyncWebServerRequest* request)
     auto curPin = root.createNestedObject("curPin");
     curPin["name"] = config.Dev_PinMapping;
 
-    auto nrfPinObj = curPin.createNestedObject("nrf24");
-    nrfPinObj["clk"] = pin.nrf24_clk;
-    nrfPinObj["cs"] = pin.nrf24_cs;
-    nrfPinObj["en"] = pin.nrf24_en;
-    nrfPinObj["irq"] = pin.nrf24_irq;
-    nrfPinObj["miso"] = pin.nrf24_miso;
-    nrfPinObj["mosi"] = pin.nrf24_mosi;
-
-    auto cmtPinObj = curPin.createNestedObject("cmt");
-    cmtPinObj["clk"] = pin.cmt_clk;
-    cmtPinObj["cs"] = pin.cmt_cs;
-    cmtPinObj["fcs"] = pin.cmt_fcs;
-    cmtPinObj["sdio"] = pin.cmt_sdio;
-    cmtPinObj["gpio2"] = pin.cmt_gpio2;
-    cmtPinObj["gpio3"] = pin.cmt_gpio3;
-
     auto ethPinObj = curPin.createNestedObject("eth");
     ethPinObj["enabled"] = pin.eth_enabled;
     ethPinObj["phy_addr"] = pin.eth_phy_addr;
@@ -84,6 +68,16 @@ void WebApiDeviceClass::onDeviceAdminGet(AsyncWebServerRequest* request)
     display["contrast"] = config.Display.Contrast;
     display["language"] = config.Display.Language;
     display["diagramduration"] = config.Display.DiagramDuration;
+
+    auto sdObj = curPin.createNestedObject("sd");
+    sdObj["enabled"] = pin.sd_enabled;
+    sdObj["sck"] = pin.sd_sck;
+    sdObj["miso"] = pin.sd_miso;
+    sdObj["mosi"] = pin.sd_mosi;
+    sdObj["cs"] = pin.sd_cs;
+
+    auto sensorObj = curPin.createNestedObject("sensor");
+    sensorObj["ds18b20"] = pin.sensor_ds18b20;
 
     response->setLength();
     request->send(response);

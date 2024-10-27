@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include "SDCard.h"
+#include "IDataStoreDevice.h"
 #include <CircularBuffer.h>
 #include <TaskSchedulerDeclarations.h>
 #include <TimeoutHelper.h>
@@ -29,12 +29,14 @@ public:
 
 class DatastoreClass {
 public:
-    void init();
+    void init(IDataStoreDevice* device);
 
     void loop();
 
     void addSensor(uint16_t serial);
     void addValue(uint16_t serial, float value);
+
+    static bool getTmTime(struct tm* info, time_t time, uint32_t ms);
 
     bool getTemperature(uint16_t serial, uint32_t& time, float& value);
     bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
@@ -44,6 +46,7 @@ public:
 private:
     Task _loopTask;
     std::mutex _mutex;
+    IDataStoreDevice* _device;
 
     std::vector<std::unique_ptr<dataSensor>> _list;
 };
