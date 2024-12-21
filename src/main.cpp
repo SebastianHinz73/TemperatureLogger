@@ -25,6 +25,9 @@
 
 void setup()
 {
+    // Move all dynamic allocations >512byte to psram (if available)
+    heap_caps_malloc_extmem_enable(512);
+
     // Initialize serial output
     Serial.begin(SERIAL_BAUDRATE);
 #if ARDUINO_USB_CDC_ON_BOOT
@@ -130,14 +133,15 @@ void setup()
     if (pin.sd_enabled) {
         MessageOutput.print("Initialize SD card ... ");
         SDCard.init(scheduler);
+        Datastore.init(static_cast<IDataStoreDevice*>(&SDCard));
         MessageOutput.println("done");
     } else {
         MessageOutput.print("Initialize Ram disk ... ");
-        RamDisk.init();
+        pRamDisk = new RamDiskClass();
+        pRamDisk->init();
+        Datastore.init(static_cast<IDataStoreDevice*>(pRamDisk));
         MessageOutput.println("done");
     }
-
-    Datastore.init(pin.sd_enabled ? static_cast<IDataStoreDevice*>(&SDCard) : static_cast<IDataStoreDevice*>(&RamDisk));
 }
 
 void loop()
