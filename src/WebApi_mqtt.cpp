@@ -32,7 +32,7 @@ void WebApiMqttClass::onMqttStatus(AsyncWebServerRequest* request)
         return;
     }
 
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, MQTT_JSON_DOC_SIZE);
+    AsyncJsonResponse* response = new AsyncJsonResponse();
     auto& root = response->getRoot();
     const CONFIG_T& config = Configuration.get();
 
@@ -66,7 +66,7 @@ void WebApiMqttClass::onMqttAdminGet(AsyncWebServerRequest* request)
         return;
     }
 
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, MQTT_JSON_DOC_SIZE);
+    AsyncJsonResponse* response = new AsyncJsonResponse();
     auto& root = response->getRoot();
     const CONFIG_T& config = Configuration.get();
 
@@ -104,7 +104,7 @@ void WebApiMqttClass::onMqttAdminPost(AsyncWebServerRequest* request)
         return;
     }
 
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, MQTT_JSON_DOC_SIZE);
+    AsyncJsonResponse* response = new AsyncJsonResponse();
     auto& retMsg = response->getRoot();
     retMsg["type"] = "warning";
 

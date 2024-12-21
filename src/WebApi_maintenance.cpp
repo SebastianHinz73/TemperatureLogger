@@ -28,7 +28,7 @@ void WebApiMaintenanceClass::onRebootPost(AsyncWebServerRequest* request)
         return;
     }
 
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, MQTT_JSON_DOC_SIZE);
+    AsyncJsonResponse* response = new AsyncJsonResponse();
     auto& retMsg = response->getRoot();
     retMsg["type"] = "warning";
 

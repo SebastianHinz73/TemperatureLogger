@@ -52,7 +52,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminGet(AsyncWebServerRequest* request)
     if (!WebApi.checkCredentials(request)) {
         return;
     }
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, 128 * (1 + Configuration.getConfiguredSensorCnt()));
+    AsyncJsonResponse* response = new AsyncJsonResponse();
     auto& root = response->getRoot();
     const CONFIG_T& config = Configuration.get();
 
@@ -79,7 +79,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
         return;
     }
 
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, 128 * (1 + Configuration.getConfiguredSensorCnt()));
+    AsyncJsonResponse* response = new AsyncJsonResponse();
     JsonObject retMsg = response->getRoot();
     retMsg["type"] = "warning";
 

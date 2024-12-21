@@ -32,7 +32,7 @@ void WebApiDeviceClass::onDeviceAdminGet(AsyncWebServerRequest* request)
         return;
     }
 
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, MQTT_JSON_DOC_SIZE);
+    AsyncJsonResponse* response = new AsyncJsonResponse();
     auto& root = response->getRoot();
     const CONFIG_T& config = Configuration.get();
     const PinMapping_t& pin = PinMapping.get();
@@ -89,7 +89,7 @@ void WebApiDeviceClass::onDeviceAdminPost(AsyncWebServerRequest* request)
         return;
     }
 
-    AsyncJsonResponse* response = new AsyncJsonResponse(false, MQTT_JSON_DOC_SIZE);
+    AsyncJsonResponse* response = new AsyncJsonResponse();
     auto& retMsg = response->getRoot();
     retMsg["type"] = "warning";
 

@@ -236,6 +236,9 @@ void DisplayGraphicClass::setStatus(const bool turnOn)
 //////////////////////////////////////////////////////////////////////
 bool DisplayGraphicClass::isHallDetected()
 {
+    return false;
+
+#if 0
     u32_t Size = sizeof(_hallFifoData) / sizeof(int);
 
     _hallFifoData[_hallIndex] = hallRead(); // Reads Hall sensor value
@@ -255,6 +258,7 @@ bool DisplayGraphicClass::isHallDetected()
     }
 
     return detect;
+#endif
 }
 
 DisplayGraphicClass Display;

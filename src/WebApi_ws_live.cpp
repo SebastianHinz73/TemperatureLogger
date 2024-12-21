@@ -149,7 +149,7 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
 
     try {
         std::lock_guard<std::mutex> lock(_mutex);
-        AsyncJsonResponse* response = new AsyncJsonResponse(false, 128 * (1 + Configuration.getConfiguredSensorCnt()));
+        AsyncJsonResponse* response = new AsyncJsonResponse();
         auto& root = response->getRoot();
 
         generateJsonResponse(root);

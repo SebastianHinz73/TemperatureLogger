@@ -9,6 +9,7 @@
 #include "PinMapping.h"
 #include "WebApi.h"
 #include <AsyncJson.h>
+#include <CpuTemperature.h>
 #include <LittleFS.h>
 #include <ResetReason.h>
 
@@ -42,9 +43,14 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
 
     root["sdkversion"] = ESP.getSdkVersion();
     root["cpufreq"] = ESP.getCpuFreqMHz();
+    root["cputemp"] = CpuTemperature.read();
 
     root["heap_total"] = ESP.getHeapSize();
     root["heap_used"] = ESP.getHeapSize() - ESP.getFreeHeap();
+    root["heap_max_block"] = ESP.getMaxAllocHeap();
+    root["heap_min_free"] = ESP.getMinFreeHeap();
+    root["psram_total"] = ESP.getPsramSize();
+    root["psram_used"] = ESP.getPsramSize() - ESP.getFreePsram();
     root["sketch_total"] = ESP.getFreeSketchSpace();
     root["sketch_used"] = ESP.getSketchSize();
     root["littlefs_total"] = LittleFS.totalBytes();
@@ -53,6 +59,23 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     root["chiprevision"] = ESP.getChipRevision();
     root["chipmodel"] = ESP.getChipModel();
     root["chipcores"] = ESP.getChipCores();
+    root["flashsize"] = ESP.getFlashChipSize();
+
+    JsonArray taskDetails = root["task_details"].to<JsonArray>();
+    static std::array<char const*, 12> constexpr task_names = {
+        "IDLE0", "IDLE1", "wifi", "tiT", "loopTask", "async_tcp", "mqttclient",
+        "HUAWEI_CAN_0", "PM:SDM", "PM:HTTP+JSON", "PM:SML", "PM:HTTP+SML"
+    };
+    for (char const* task_name : task_names) {
+        TaskHandle_t const handle = xTaskGetHandle(task_name);
+        if (!handle) {
+            continue;
+        }
+        JsonObject task = taskDetails.add<JsonObject>();
+        task["name"] = task_name;
+        task["stack_watermark"] = uxTaskGetStackHighWaterMark(handle);
+        task["priority"] = uxTaskPriorityGet(handle);
+    }
 
     String reason;
     reason = ResetReason::get_reset_reason_verbose(0);
