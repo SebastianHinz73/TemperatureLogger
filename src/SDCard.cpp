@@ -5,10 +5,15 @@
 
 #include "SDCard.h"
 #include "MessageOutput.h"
-#include <PinMapping.h>
 #include <Datastore.h>
+#include <PinMapping.h>
 
 SDCardClass SDCard;
+
+SDCardClass::SDCardClass()
+    : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&SDCardClass::loop, this))
+{
+}
 
 void SDCardClass::init(Scheduler& scheduler)
 {
@@ -18,8 +23,6 @@ void SDCardClass::init(Scheduler& scheduler)
     _lastActionTime = millis();
 
     scheduler.addTask(_loopTask);
-    _loopTask.setCallback(std::bind(&SDCardClass::loop, this));
-    _loopTask.setIterations(TASK_FOREVER);
     _loopTask.enable();
 }
 

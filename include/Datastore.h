@@ -29,9 +29,8 @@ public:
 
 class DatastoreClass {
 public:
-    void init(IDataStoreDevice* device);
-
-    void loop();
+    DatastoreClass();
+    void init(Scheduler& scheduler, IDataStoreDevice* device);
 
     void addSensor(uint16_t serial);
     void addValue(uint16_t serial, float value);
@@ -44,7 +43,10 @@ public:
     bool valueChanged(uint16_t serial);
 
 private:
+    void loop();
+
     Task _loopTask;
+
     std::mutex _mutex;
     IDataStoreDevice* _device;
 

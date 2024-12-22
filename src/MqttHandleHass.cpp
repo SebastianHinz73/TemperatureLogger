@@ -7,16 +7,20 @@
 #include "MqttSettings.h"
 #include "NetworkSettings.h"
 #include "Utils.h"
+#include "__compiled_constants.h"
 #include "defaults.h"
 #include "DS18B20List.h"
 
 MqttHandleHassClass MqttHandleHass;
 
+MqttHandleHassClass::MqttHandleHassClass()
+    : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&MqttHandleHassClass::loop, this))
+{
+}
+
 void MqttHandleHassClass::init(Scheduler& scheduler)
 {
     scheduler.addTask(_loopTask);
-    _loopTask.setCallback(std::bind(&MqttHandleHassClass::loop, this));
-    _loopTask.setIterations(TASK_FOREVER);
     _loopTask.enable();
 }
 
@@ -51,12 +55,6 @@ void MqttHandleHassClass::publishConfig()
     if (!MqttSettings.getConnected()) {
         return;
     }
-    if (_macAddr.isEmpty()) {
-        uint8_t* bssid = WiFi.BSSID();
-        char mac[13];
-        sprintf(mac, "%02X%02X%02X%02X%02X%02X", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
-        _macAddr = mac;
-    }
 
     const CONFIG_T& config = Configuration.get();
     for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
@@ -70,13 +68,13 @@ void MqttHandleHassClass::publishSensor(const DS18B20SENSOR_CONFIG_T& sensorConf
 
     String configTopic = "sensor/logger_" + _macAddr + "/DS18B20_" + String(sensorConfig.Serial, 16) + "/config";
 
-    DynamicJsonDocument root(1024);
+    JsonDocument root;
     root["name"] = sensorConfig.Name;
     root["stat_t"] = MqttSettings.getPrefix() + _macAddr + "/" + String(sensorConfig.Serial, 16);
     root["uniq_id"] = _macAddr + "_" + String(sensorConfig.Serial, 16) + "_temperature";
     root["unit_of_meas"] = config.DS18B20.Fahrenheit ? "°F" : "°C";
 
-    auto object = root.createNestedObject("dev");
+    auto object = root["dev"].to<JsonObject>();
 
     object["name"] = NetworkSettings.getHostname();
     object["ids"] = _macAddr;
@@ -101,5 +99,6 @@ void MqttHandleHassClass::publish(const String& subtopic, const String& payload)
 {
     String topic = Configuration.get().Mqtt.Hass.Topic;
     topic += subtopic;
-    MqttSettings.publishGeneric(topic.c_str(), payload.c_str(), Configuration.get().Mqtt.Hass.Retain);
+    MqttSettings.publishGeneric(topic, payload, Configuration.get().Mqtt.Hass.Retain);
+    yield();
 }

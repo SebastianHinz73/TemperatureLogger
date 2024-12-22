@@ -32,19 +32,30 @@ bool is_eqal(const DeviceAddress& a, const DeviceAddress& b)
     return !(a[0] != b[0] || a[1] != b[1] || a[2] != b[2] || a[3] != b[3] || a[4] != b[4] || a[5] != b[5] || a[6] != b[6] || a[7] != b[7]);
 }
 
+DS18B20ListClass::DS18B20ListClass()
+    : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&DS18B20ListClass::loop, this))
+{
+}
+
 void DS18B20ListClass::init(Scheduler& scheduler)
 {
     const PinMapping_t& pin = PinMapping.get();
 
     scheduler.addTask(_loopTask);
-    _loopTask.setCallback(std::bind(&DS18B20ListClass::loop, this));
-    _loopTask.setIterations(TASK_FOREVER);
     _loopTask.enable();
 
-    CONFIG_T& config = Configuration.get();
+/* TODO blocks
+
+    MessageOutput.print("#1 ");
+
+    auto guard = Configuration.getWriteGuard();
+    MessageOutput.print("#3a ");
+    auto& config = guard.getConfig();
+    MessageOutput.print("#4 ");
+
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         config.DS18B20.Sensors[i].Connected = false;
-    }
+    }*/
 
     _ow.begin(pin.sensor_ds18b20);
     _sensors.setOneWire(&_ow);
@@ -52,6 +63,7 @@ void DS18B20ListClass::init(Scheduler& scheduler)
 
     scanSensors();
     readTemperature();
+
     _lastScan = millis();
     _lastTemperatureUpdate = millis();
 }
@@ -62,7 +74,8 @@ void DS18B20ListClass::loop()
         scanSensors();
         _lastScan = millis();
     }
-    CONFIG_T& config = Configuration.get();
+
+    auto config = Configuration.get();
     if (millis() - _lastTemperatureUpdate > config.DS18B20.PollInterval * 1000) {
         readTemperature();
         _lastTemperatureUpdate = millis();
@@ -128,7 +141,7 @@ void DS18B20ListClass::scanSensors()
 void DS18B20ListClass::readTemperature()
 {
     _sensors.requestTemperatures();
-    CONFIG_T& config = Configuration.get();
+    auto config = Configuration.get();
 
     for (const auto& entry : _list) {
         float temp;

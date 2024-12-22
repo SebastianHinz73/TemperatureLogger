@@ -1,6 +1,8 @@
 <template>
-    <CardElement :text="$t('interfacenetworkinfo.NetworkInterface', { iface: networkStatus.network_mode })"
+    <CardElement
+        :text="$t('interfacenetworkinfo.NetworkInterface', { iface: networkStatus.network_mode })"
         textVariant="text-bg-primary"
+        table
     >
         <div class="table-responsive">
             <table class="table table-hover table-condensed">

@@ -11,24 +11,18 @@
 #include "helper.h"
 #include <AsyncJson.h>
 
-void WebApiTempLoggerClass::init(AsyncWebServer& server)
+void WebApiTempLoggerClass::init(AsyncWebServer& server, Scheduler& scheduler)
 {
     using std::placeholders::_1;
 
-    _server = &server;
-
-    _server->on("/api/templogger/config", HTTP_GET, std::bind(&WebApiTempLoggerClass::onTempLoggerAdminGet, this, _1));
-    _server->on("/api/templogger/config", HTTP_POST, std::bind(&WebApiTempLoggerClass::onTempLoggerAdminPost, this, _1));
-}
-
-void WebApiTempLoggerClass::loop()
-{
+    server.on("/api/templogger/config", HTTP_GET, std::bind(&WebApiTempLoggerClass::onTempLoggerAdminGet, this, _1));
+    server.on("/api/templogger/config", HTTP_POST, std::bind(&WebApiTempLoggerClass::onTempLoggerAdminPost, this, _1));
 }
 
 void generateJsonResponse(JsonVariant& root)
 {
     const CONFIG_T& config = Configuration.get();
-    auto tempArray = root.createNestedArray("temperatures");
+    auto tempArray = root["temperatures"].to<JsonArray>();
 
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         if (config.DS18B20.Sensors[i].Serial == 0) {
@@ -38,7 +32,7 @@ void generateJsonResponse(JsonVariant& root)
         float value;
         bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
 
-        JsonObject tempObj = tempArray.createNestedObject();
+        JsonObject tempObj = tempArray[i].to<JsonObject>();
         tempObj["valid"] = valid;
         tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
         tempObj["name"] = config.DS18B20.Sensors[i].Name;
@@ -58,19 +52,18 @@ void WebApiTempLoggerClass::onTempLoggerAdminGet(AsyncWebServerRequest* request)
 
     root["pollinterval"] = config.DS18B20.PollInterval;
     root["fahrenheit"] = config.DS18B20.Fahrenheit;
-    auto sensors = root.createNestedArray("sensors");
+    auto sensors = root["sensors"].to<JsonArray>();
 
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         if (config.DS18B20.Sensors[i].Serial != 0) {
-            JsonObject sensor = sensors.createNestedObject();
+            JsonObject sensor = sensors[i].to<JsonObject>();
             sensor["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
             sensor["connected"] = config.DS18B20.Sensors[i].Connected;
             sensor["name"] = config.DS18B20.Sensors[i].Name;
         }
     }
 
-    response->setLength();
-    request->send(response);
+    WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 }
 
 void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request)
@@ -86,8 +79,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
     if (!request->hasParam("data", true)) {
         retMsg["message"] = "No values found!";
         retMsg["code"] = WebApiError::GenericNoValueFound;
-        response->setLength();
-        request->send(response);
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
         return;
     }
 
@@ -96,43 +88,38 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
     if (json.length() > 128 * (1 + Configuration.getConfiguredSensorCnt())) {
         retMsg["message"] = "Data too large!";
         retMsg["code"] = WebApiError::GenericDataTooLarge;
-        response->setLength();
-        request->send(response);
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
         return;
     }
 
-    DynamicJsonDocument root(128 * (1 + Configuration.getConfiguredSensorCnt()));
+    JsonDocument root;
     DeserializationError error = deserializeJson(root, json);
 
     if (error) {
         retMsg["message"] = "Failed to parse data!";
         retMsg["code"] = WebApiError::GenericParseError;
-        response->setLength();
-        request->send(response);
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
         return;
     }
 
-    if (!root.containsKey("pollinterval") || !root.containsKey("fahrenheit") || !root.containsKey("sensors")) {
+    if (!(root["pollinterval"].is<JsonObject>() && root["fahrenheit"].is<JsonObject>() && root["sensors"].is<JsonObject>())) {
         retMsg["message"] = "Values are missing!";
         retMsg["code"] = WebApiError::GenericValueMissing;
-        response->setLength();
-        request->send(response);
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
         return;
     }
 
     if (root["pollinterval"].as<uint32_t>() < 5) {
         retMsg["message"] = "Poll interval minimum is 5 seconds!";
         retMsg["code"] = WebApiError::DS18B20BasePollIntervallToSmall;
-        response->setLength();
-        request->send(response);
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
         return;
     }
 
     if (root["pollinterval"].as<uint32_t>() > 3600) {
         retMsg["message"] = "Poll interval maximum is 3600 seconds!";
         retMsg["code"] = WebApiError::DS18B20BasePollIntervallToBig;
-        response->setLength();
-        request->send(response);
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
         return;
     }
 
@@ -144,16 +131,17 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
         if (sensor.isNull()) {
             break;
         }
-        if (!(sensor.containsKey("serial") && sensor.containsKey("connected") && sensor.containsKey("name") && strlen(sensor["name"]) > 0)) {
+        if (!(sensor["serial"].is<JsonObject>() && sensor["connected"].is<JsonObject>() && sensor["name"].is<JsonObject>() && strlen(sensor["name"]) > 0)) {
             retMsg["message"] = "Values are missing!";
             retMsg["code"] = WebApiError::GenericValueMissing;
-            response->setLength();
-            request->send(response);
+            WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
             return;
         }
     }
 
-    CONFIG_T& config = Configuration.get();
+    auto guard = Configuration.getWriteGuard();
+    auto& config = guard.getConfig();
+
     config.DS18B20.PollInterval = root["pollinterval"].as<int>();
     config.DS18B20.Fahrenheit = root["fahrenheit"].as<bool>();
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
@@ -170,14 +158,12 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
             strlcpy(config.DS18B20.Sensors[i].Name, "undefined", sizeof(config.DS18B20.Sensors[i].Name));
         }
     }
-    Configuration.write();
 
     retMsg["type"] = "success";
     retMsg["message"] = "Settings saved!";
     retMsg["code"] = WebApiError::GenericSuccess;
 
-    response->setLength();
-    request->send(response);
+    WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 
     MqttSettings.performReconnect();
 }

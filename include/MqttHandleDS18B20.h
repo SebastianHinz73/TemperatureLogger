@@ -7,6 +7,7 @@
 
 class MqttHandleDS18B20Class {
 public:
+	MqttHandleDS18B20Class();
     void init(Scheduler& scheduler);
     void loop();
 

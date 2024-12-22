@@ -9,19 +9,15 @@
 
 DatastoreClass Datastore;
 
-#define PRINT_VALUES(X, Y)                                         \
-    for (decltype(X)::index_t i = 0; i < X.size(); i++) {          \
-        uint32_t h = X[i] / 3600;                                  \
-        uint32_t m = (X[i] - h * 3600) / 60;                       \
-        uint32_t s = X[i] - h * 3600 - m * 60;                     \
-        MessageOutput.printf("hh:%02d:%02d (%.2f), ", m, s, Y[i]); \
-    }                                                              \
-    MessageOutput.println();
-
-/////////////////////////
-void DatastoreClass::init(IDataStoreDevice* device)
+DatastoreClass::DatastoreClass()
+    : _loopTask(1 * TASK_SECOND, TASK_FOREVER, std::bind(&DatastoreClass::loop, this))
 {
-    _device = device;
+}
+
+void DatastoreClass::init(Scheduler& scheduler, IDataStoreDevice* device)
+{
+    scheduler.addTask(_loopTask);
+    _loopTask.enable();
 }
 
 void DatastoreClass::loop()

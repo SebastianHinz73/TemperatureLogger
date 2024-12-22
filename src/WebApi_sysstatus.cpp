@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2022-2023 Thomas Basler and others
+ * Copyright (C) 2022-2024 Thomas Basler and others
  */
 #include "WebApi_sysstatus.h"
 #include "Configuration.h"
@@ -8,26 +8,18 @@
 #include "NetworkSettings.h"
 #include "PinMapping.h"
 #include "WebApi.h"
+#include "__compiled_constants.h"
 #include <AsyncJson.h>
 #include <CpuTemperature.h>
 #include <LittleFS.h>
 #include <ResetReason.h>
 
-#ifndef AUTO_GIT_HASH
-#define AUTO_GIT_HASH ""
-#endif
 
-void WebApiSysstatusClass::init(AsyncWebServer& server)
+void WebApiSysstatusClass::init(AsyncWebServer& server, Scheduler& scheduler)
 {
     using std::placeholders::_1;
 
-    _server = &server;
-
-    _server->on("/api/system/status", HTTP_GET, std::bind(&WebApiSysstatusClass::onSystemStatus, this, _1));
-}
-
-void WebApiSysstatusClass::loop()
-{
+    server.on("/api/system/status", HTTP_GET, std::bind(&WebApiSysstatusClass::onSystemStatus, this, _1));
 }
 
 void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
@@ -68,9 +60,7 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     };
     for (char const* task_name : task_names) {
         TaskHandle_t const handle = xTaskGetHandle(task_name);
-        if (!handle) {
-            continue;
-        }
+        if (!handle) { continue; }
         JsonObject task = taskDetails.add<JsonObject>();
         task["name"] = task_name;
         task["stack_watermark"] = uxTaskGetStackHighWaterMark(handle);
@@ -89,19 +79,12 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     char version[16];
     snprintf(version, sizeof(version), "%d.%d.%d", CONFIG_VERSION >> 24 & 0xff, CONFIG_VERSION >> 16 & 0xff, CONFIG_VERSION >> 8 & 0xff);
     root["config_version"] = version;
-    root["git_hash"] = AUTO_GIT_HASH;
+    root["git_hash"] = __COMPILED_GIT_HASH__;
     root["templogger_version"] = TEMP_LOGGER_VERSION;
     root["pioenv"] = PIOENV;
 
     root["uptime"] = esp_timer_get_time() / 1000000;
 
-    root["nrf_configured"] = false; // PinMapping.isValidNrf24Config();
-    root["nrf_connected"] = false; // Hoymiles.getRadioNrf()->isConnected();
-    root["nrf_pvariant"] = false; // Hoymiles.getRadioNrf()->isPVariant();
 
-    root["cmt_configured"] = false; // PinMapping.isValidCmt2300Config();
-    root["cmt_connected"] = false; // Hoymiles.getRadioCmt()->isConnected();
-
-    response->setLength();
-    request->send(response);
+    WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 }

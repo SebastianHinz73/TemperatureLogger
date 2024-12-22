@@ -5,13 +5,29 @@
 #include <TaskSchedulerDeclarations.h>
 #include <U8g2lib.h>
 
+#define CHART_HEIGHT 20 // chart area hight in pixels
+#define CHART_WIDTH 47 // chart area width in pixels
+
+// Left-Upper position of diagram is drawn
+// (text of Y-axis is display left of that pos)
+#define CHART_POSX 80
+#define CHART_POSY 0
+
 enum DisplayType_t {
     None,
     PCD8544,
     SSD1306,
     SH1106,
     SSD1309,
+    ST7567_GM12864I_59N,
     DisplayType_Max,
+};
+
+enum DiagramMode_t {
+    Off,
+    Small,
+    Fullscreen,
+    DisplayMode_Max,
 };
 
 class DisplayGraphicClass {
@@ -23,7 +39,8 @@ public:
     void setContrast(const uint8_t contrast);
     void setStatus(const bool turnOn);
     void setOrientation(const uint8_t rotation = DISPLAY_ROTATION);
-    void setLanguage(const uint8_t language);
+    void setLocale(const String& locale);
+    void setDiagramMode(DiagramMode_t mode);
     void setStartupDisplay();
 
     bool enablePowerSafe = true;
@@ -44,7 +61,8 @@ private:
     bool _displayTurnedOn;
 
     DisplayType_t _display_type = DisplayType_t::None;
-    uint8_t _display_language = DISPLAY_LANGUAGE;
+    DiagramMode_t _diagram_mode = DiagramMode_t::Off;
+    String _display_language = DISPLAY_LOCALE;
     uint8_t _mExtra;
     uint8_t _actSensorIndex;
     uint8_t _actPageTime;
@@ -55,6 +73,7 @@ private:
     char _fmtText[50];
     bool _isLarge = false;
     uint8_t _lineOffsets[5];
+    String _i18n_date_format;
     int _hallFifoData[16]; // measure hall sensor and switch on display
     int _hallIndex;
 };
