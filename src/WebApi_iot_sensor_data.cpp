@@ -12,18 +12,12 @@
 #include "defaults.h"
 #include <AsyncJson.h>
 
-void WebApiIotSensorData::init(AsyncWebServer& server)
+void WebApiIotSensorData::init(AsyncWebServer& server, Scheduler& scheduler)
 {
     using std::placeholders::_1;
 
-    _server = &server;
-
-    _server->on("/config", HTTP_GET, std::bind(&WebApiIotSensorData::onConfig, this, _1));
-    _server->on("/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
-}
-
-void WebApiIotSensorData::loop()
-{
+    server.on("/config", HTTP_GET, std::bind(&WebApiIotSensorData::onConfig, this, _1));
+    server.on("/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
 }
 
 void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
@@ -45,7 +39,7 @@ void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
         bootTime = buffer;
     }
 
-    CONFIG_T& config = Configuration.get();
+    auto config = Configuration.get();
     snprintf(buffer, sizeof(buffer), "1;%s;%s;%s;-1\n", NetworkSettingsClass::getHostname().c_str(), TEMP_LOGGER_VERSION, bootTime.c_str());
 
     String text = buffer;

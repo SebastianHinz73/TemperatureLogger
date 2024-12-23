@@ -6,6 +6,8 @@
 #include "DS18B20List.h"
 #include "Datastore.h"
 #include "Display_Graphic.h"
+#include "I18n.h"
+#include "Led_Single.h"
 #include "MessageOutput.h"
 #include "MqttHandleDS18B20.h"
 #include "MqttHandleHass.h"
@@ -15,25 +17,32 @@
 #include "PinMapping.h"
 #include "RamDisk.h"
 #include "SDCard.h"
+#include "RestartHelper.h"
 #include "Scheduler.h"
 #include "Utils.h"
 #include "WebApi.h"
 #include "defaults.h"
 #include <Arduino.h>
 #include <LittleFS.h>
+#include <SpiManager.h>
 #include <TaskScheduler.h>
+#include <esp_heap_caps.h>
 
 void setup()
 {
     // Move all dynamic allocations >512byte to psram (if available)
     heap_caps_malloc_extmem_enable(512);
 
+    // Initialize SpiManager
+    SpiManagerInst.register_bus(SPI2_HOST);
+#if SOC_SPI_PERIPH_NUM > 2
+    SpiManagerInst.register_bus(SPI3_HOST);
+#endif
+
     // Initialize serial output
     Serial.begin(SERIAL_BAUDRATE);
-#if ARDUINO_USB_CDC_ON_BOOT
-    Serial.setTxTimeoutMs(0);
-    delay(100);
-#else
+#if !ARDUINO_USB_CDC_ON_BOOT
+    // Only wait for serial interface to be set up when not using CDC
     while (!Serial)
         yield();
 #endif
@@ -55,10 +64,9 @@ void setup()
     }
 
     // Read configuration values
+    Configuration.init(scheduler);
     MessageOutput.print("Reading configuration... ");
     if (!Configuration.read()) {
-        MessageOutput.print("initializing... ");
-        Configuration.init();
         if (Configuration.write()) {
             MessageOutput.print("written... ");
         } else {
@@ -70,6 +78,11 @@ void setup()
         Configuration.migrate();
     }
     auto& config = Configuration.get();
+    MessageOutput.println("done");
+
+    // Read languate pack
+    MessageOutput.print("Reading language pack... ");
+    I18n.init(scheduler);
     MessageOutput.println("done");
 
     // Load PinMapping
@@ -115,11 +128,12 @@ void setup()
             pin.display_clk,
             pin.display_cs,
             pin.display_reset);
+    Display.setDiagramMode(static_cast<DiagramMode_t>(config.Display.Diagram.Mode));
         Display.setOrientation(config.Display.Rotation);
         Display.enablePowerSafe = config.Display.PowerSafe;
         Display.enableScreensaver = config.Display.ScreenSaver;
         Display.setContrast(config.Display.Contrast);
-        Display.setLanguage(config.Display.Language);
+        Display.setLocale(config.Display.Locale);
         Display.setStartupDisplay();
         MessageOutput.println("done");
     }
@@ -133,15 +147,16 @@ void setup()
     if (pin.sd_enabled) {
         MessageOutput.print("Initialize SD card ... ");
         SDCard.init(scheduler);
-        Datastore.init(static_cast<IDataStoreDevice*>(&SDCard));
+        Datastore.init(scheduler, static_cast<IDataStoreDevice*>(&SDCard));
         MessageOutput.println("done");
     } else {
         MessageOutput.print("Initialize Ram disk ... ");
         pRamDisk = new RamDiskClass();
         pRamDisk->init();
-        Datastore.init(static_cast<IDataStoreDevice*>(pRamDisk));
+        Datastore.init(scheduler, static_cast<IDataStoreDevice*>(pRamDisk));
         MessageOutput.println("done");
     }
+    RestartHelper.init(scheduler);
 }
 
 void loop()

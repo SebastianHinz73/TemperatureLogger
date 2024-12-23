@@ -8,59 +8,65 @@
             </div>
         </div>
 
-        <CardElement :text="$t('firmwareupgrade.OtaError')" textVariant="text-bg-danger" center-content
-                     v-if="!loading && !uploading && OTAError != ''"
+        <CardElement
+            :text="$t('firmwareupgrade.OtaError')"
+            textVariant="text-bg-danger"
+            center-content
+            v-if="!loading && !uploading && OTAError != ''"
         >
             <p class="h1 mb-2">
                 <BIconExclamationCircleFill />
             </p>
-
-            <span style="vertical-align: middle" class="ml-2">
-                {{ OTAError }}
-            </span>
-            <br />
-            <br />
-            <button class="btn btn-light" @click="clear">
-                <BIconArrowLeft /> {{ $t('firmwareupgrade.Back') }}
-            </button>
-            <button class="btn btn-primary" @click="retryOTA">
-                <BIconArrowRepeat /> {{ $t('firmwareupgrade.Retry') }}
-            </button>
+            {{ OTAError }}
+            <div class="mt-3 d-flex gap-3 justify-content-center">
+                <button class="btn btn-light" @click="clear">
+                    <BIconArrowLeft /> {{ $t('firmwareupgrade.Back') }}
+                </button>
+                <button class="btn btn-primary" @click="retryOTA">
+                    <BIconArrowRepeat /> {{ $t('firmwareupgrade.Retry') }}
+                </button>
+            </div>
         </CardElement>
 
-        <CardElement :text="$t('firmwareupgrade.OtaStatus')" textVariant="text-bg-success" center-content
-                     v-else-if="!loading && !uploading && OTASuccess"
+        <CardElement
+            :text="$t('firmwareupgrade.OtaStatus')"
+            textVariant="text-bg-success"
+            center-content
+            v-else-if="!loading && !uploading && OTASuccess"
         >
-            <span class="h1 mb-2">
-                <BIconCheckCircle />
-            </span>
-            <span> {{ $t('firmwareupgrade.OtaSuccess') }} </span>
-            <br />
-            <br />
-            <button class="btn btn-primary" @click="clear">
-                <BIconArrowLeft /> {{ $t('firmwareupgrade.Back') }}
-            </button>
+            <BIconCheckCircle class="fs-1" />&nbsp;{{ $t('firmwareupgrade.OtaSuccess') }}
         </CardElement>
 
-        <CardElement :text="$t('firmwareupgrade.FirmwareUpload')" textVariant="text-bg-primary" center-content
-                     v-else-if="!loading && !uploading"
+        <CardElement
+            :text="$t('firmwareupgrade.FirmwareUpload')"
+            textVariant="text-bg-primary"
+            center-content
+            v-else-if="!loading && !uploading"
         >
-            <div class="form-group pt-2 mt-3">
+            <div class="form-group">
                 <input class="form-control" type="file" ref="file" accept=".bin,.bin.gz" @change="uploadOTA" />
             </div>
         </CardElement>
 
-        <CardElement :text="$t('firmwareupgrade.UploadProgress')" textVariant="text-bg-primary" center-content
-                     v-else-if="!loading && uploading"
+        <CardElement
+            :text="$t('firmwareupgrade.UploadProgress')"
+            textVariant="text-bg-primary"
+            center-content
+            v-else-if="!loading && uploading"
         >
             <div class="progress">
-                <div class="progress-bar" role="progressbar" :style="{ width: progress + '%' }"
-                    v-bind:aria-valuenow="progress" aria-valuemin="0" aria-valuemax="100">
+                <div
+                    class="progress-bar"
+                    role="progressbar"
+                    :style="{ width: progress + '%' }"
+                    v-bind:aria-valuenow="progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                >
                     {{ progress }}%
                 </div>
             </div>
         </CardElement>
-
     </BasePage>
 </template>
 
@@ -68,14 +74,10 @@
 import BasePage from '@/components/BasePage.vue';
 import CardElement from '@/components/CardElement.vue';
 import { authHeader, isLoggedIn } from '@/utils/authentication';
-import {
-    BIconArrowLeft,
-    BIconArrowRepeat,
-    BIconCheckCircle,
-    BIconExclamationCircleFill
-} from 'bootstrap-icons-vue';
-import SparkMD5 from "spark-md5";
+import { BIconArrowLeft, BIconArrowRepeat, BIconCheckCircle, BIconExclamationCircleFill } from 'bootstrap-icons-vue';
+import SparkMD5 from 'spark-md5';
 import { defineComponent } from 'vue';
+import { waitRestart } from '@/utils/waitRestart';
 
 export default defineComponent({
     components: {
@@ -91,9 +93,9 @@ export default defineComponent({
             loading: true,
             uploading: false,
             progress: 0,
-            OTAError: "",
+            OTAError: '',
             OTASuccess: false,
-            type: "firmware",
+            type: 'firmware',
             file: {} as Blob,
         };
     },
@@ -121,8 +123,7 @@ export default defineComponent({
                 };
                 const loadNext = () => {
                     const start = currentChunk * chunkSize;
-                    const end =
-                        start + chunkSize >= file.size ? file.size : start + chunkSize;
+                    const end = start + chunkSize >= file.size ? file.size : start + chunkSize;
                     fileReader.readAsArrayBuffer(blobSlice.call(file, start, end));
                 };
                 loadNext();
@@ -138,10 +139,11 @@ export default defineComponent({
                 }
             }
             const request = new XMLHttpRequest();
-            request.addEventListener("load", () => {
+            request.addEventListener('load', () => {
                 // request.response will hold the response from the server
                 if (request.status === 200) {
                     this.OTASuccess = true;
+                    waitRestart(this.$router);
                 } else if (request.status !== 500) {
                     this.OTAError = `[HTTP ERROR] ${request.statusText}`;
                 } else {
@@ -151,40 +153,42 @@ export default defineComponent({
                 this.progress = 0;
             });
             // Upload progress
-            request.upload.addEventListener("progress", (e) => {
+            request.upload.addEventListener('progress', (e) => {
                 this.progress = Math.trunc((e.loaded / e.total) * 100);
             });
             request.withCredentials = true;
             this.fileMD5(this.file)
                 .then((md5) => {
-                    formData.append("MD5", (md5 as string));
-                    formData.append("firmware", this.file, "firmware");
-                    request.open("post", "/api/firmware/update");
+                    formData.append('MD5', md5 as string);
+                    formData.append('firmware', this.file, 'firmware');
+                    request.open('post', '/api/firmware/update');
                     authHeader().forEach((value, key) => {
                         request.setRequestHeader(key, value);
                     });
                     request.send(formData);
                 })
                 .catch(() => {
-                    this.OTAError =
-                        "Unknown error while upload, check the console for details.";
+                    this.OTAError = 'Unknown error while upload, check the console for details.';
                     this.uploading = false;
                     this.progress = 0;
                 });
         },
         retryOTA() {
-            this.OTAError = "";
+            this.OTAError = '';
             this.OTASuccess = false;
             this.uploadOTA(null);
         },
         clear() {
-            this.OTAError = "";
+            this.OTAError = '';
             this.OTASuccess = false;
         },
     },
     mounted() {
         if (!isLoggedIn()) {
-            this.$router.push({ path: "/login", query: { returnUrl: this.$router.currentRoute.value.fullPath } });
+            this.$router.push({
+                path: '/login',
+                query: { returnUrl: this.$router.currentRoute.value.fullPath },
+            });
         }
         this.loading = false;
     },

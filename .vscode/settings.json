@@ -1,6 +1,13 @@
 {
     "C_Cpp.clang_format_style": "WebKit",
     "files.associations": {
-        "functional": "cpp"
+        "functional": "cpp",
+        "vector": "cpp",
+        "*.tcc": "cpp",
+        "unordered_map": "cpp",
+        "fstream": "cpp",
+        "istream": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp"
     }
 }

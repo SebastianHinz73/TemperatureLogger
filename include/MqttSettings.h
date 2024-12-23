@@ -20,6 +20,7 @@ public:
     void unsubscribe(const String& topic);
 
     String getPrefix() const;
+    String getClientId();
 
 private:
     void NetworkEvent(network_event event);
@@ -34,8 +35,6 @@ private:
     void createMqttClientObject();
 
     MqttClient* _mqttClient = nullptr;
-    String _clientId;
-    String _willTopic;
     Ticker _mqttReconnectTimer;
     MqttSubscribeParser _mqttSubscribeParser;
     std::mutex _clientLock;

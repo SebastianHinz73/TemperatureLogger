@@ -2,10 +2,11 @@
 #pragma once
 
 #include "FS.h"
+#include "IDataStoreDevice.h"
 #include "SD.h"
 #include "SPI.h"
-#include "IDataStoreDevice.h"
 #include <Arduino.h>
+#include <ESPAsyncWebServer.h>
 #include <TaskSchedulerDeclarations.h>
 #include <mutex>
 
@@ -19,9 +20,8 @@ enum SDCardState_t {
 
 class SDCardClass : public IDataStoreDevice {
 public:
-    SDCardClass() { }
+    SDCardClass();
     void init(Scheduler& scheduler);
-    void loop();
 
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
@@ -29,6 +29,8 @@ public:
     virtual bool getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
 
 private:
+    void loop();
+
     void scanCard();
     bool openFile(uint16_t serial, const tm timeinfo, const char* mode, File& file);
 

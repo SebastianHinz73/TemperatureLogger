@@ -1,5 +1,12 @@
 <template>
-    <BasePage :title="$t('home.LiveData')" :isLoading="dataLoading" :isWideScreen="true">
+    <BasePage
+        :title="$t('home.LiveData')"
+        :isLoading="dataLoading"
+        :isWideScreen="true"
+        :showWebSocket="true"
+        :isWebsocketConnected="isWebsocketConnected"
+        @reload="reloadData"
+    >
         <HintView :hints="liveData.hints" />
         <SensorInfo :sensorData="liveData.temperatures" /><br />
     </BasePage>
@@ -11,15 +18,13 @@ import HintView from '@/components/HintView.vue';
 import SensorInfo from '@/components/SensorInfo.vue';
 import type { Temperature, LiveData } from '@/types/LiveDataStatus';
 import { authHeader, authUrl, handleResponse, isLoggedIn } from '@/utils/authentication';
-
-
 import { defineComponent } from 'vue';
 
 export default defineComponent({
     components: {
         BasePage,
         HintView,
-        SensorInfo
+        SensorInfo,
     },
     data() {
         return {
@@ -31,15 +36,16 @@ export default defineComponent({
             dataLoading: true,
             liveData: {} as LiveData,
             isFirstFetchAfterConnect: true,
+            isWebsocketConnected: false,
         };
     },
     created() {
         this.getInitialData();
         this.initSocket();
-        this.$emitter.on("logged-in", () => {
+        this.$emitter.on('logged-in', () => {
             this.isLogged = this.isLoggedIn();
         });
-        this.$emitter.on("logged-out", () => {
+        this.$emitter.on('logged-out', () => {
             this.isLogged = this.isLoggedIn();
         });
     },
@@ -49,36 +55,53 @@ export default defineComponent({
         this.closeSocket();
     },
     updated() {
+        console.log('Updated');
     },
     computed: {
         sensorData(): Temperature[] {
             return this.liveData.temperatures;
-        }
+        },
     },
     methods: {
         isLoggedIn,
-        getInitialData() {
-            this.dataLoading = true;
-            fetch("/api/livedata/status", { headers: authHeader() })
+        getInitialData(triggerLoading: boolean = true) {
+            if (triggerLoading) {
+                this.dataLoading = true;
+            }
+            fetch('/api/livedata/status', { headers: authHeader() })
                 .then((response) => handleResponse(response, this.$emitter, this.$router))
                 .then((data) => {
                     this.liveData = data;
-                    this.dataLoading = false;
+                    if (triggerLoading) {
+                        this.dataLoading = false;
+                    }
                 });
         },
+        reloadData() {
+            this.closeSocket();
+
+            setTimeout(() => {
+                this.getInitialData(false);
+                this.initSocket();
+            }, 1000);
+        },
         initSocket() {
-            console.log("Starting connection to WebSocket Server");
+            console.log('Starting connection to WebSocket Server');
 
             const { protocol, host } = location;
             const authString = authUrl();
-            const webSocketUrl = `${protocol === "https:" ? "wss" : "ws"
-                }://${authString}${host}/livedata`;
+            const webSocketUrl = `${protocol === 'https:' ? 'wss' : 'ws'}://${authString}${host}/livedata`;
 
             this.socket = new WebSocket(webSocketUrl);
 
             this.socket.onmessage = (event) => {
-                if (event.data != "{}") {
-                    this.liveData = JSON.parse(event.data);
+                console.log(event);
+                if (event.data != '{}') {
+                    const newData = JSON.parse(event.data);
+
+                    Object.assign(this.liveData.temperatures, newData.temperatures);
+                    Object.assign(this.liveData.hints, newData.hints);
+
                     this.dataLoading = false;
                     this.heartCheck(); // Reset heartbeat detection
                 } else {
@@ -88,9 +111,15 @@ export default defineComponent({
                 }
             };
 
-            this.socket.onopen = function (event) {
+            this.socket.onopen = (event) => {
                 console.log(event);
-                console.log("Successfully connected to the echo websocket server...");
+                console.log('Successfully connected to the echo websocket server...');
+                this.isWebsocketConnected = true;
+            };
+
+            this.socket.onclose = () => {
+                console.log('Connection to websocket closed...');
+                this.isWebsocketConnected = false;
             };
 
             // Listen to window events , When the window closes , Take the initiative to disconnect websocket Connect
@@ -100,11 +129,13 @@ export default defineComponent({
         },
         // Send heartbeat packets regularly * 59s Send a heartbeat
         heartCheck(duration: number = 59) {
-            this.heartInterval && clearTimeout(this.heartInterval);
+            if (this.heartInterval) {
+                clearTimeout(this.heartInterval);
+            }
             this.heartInterval = setInterval(() => {
                 if (this.socket.readyState === 1) {
                     // Connection status
-                    this.socket.send("ping");
+                    this.socket.send('ping');
                 } else {
                     this.initSocket(); // Breakpoint reconnection 5 Time
                 }
@@ -113,7 +144,9 @@ export default defineComponent({
         /** To break off websocket Connect */
         closeSocket() {
             this.socket.close();
-            this.heartInterval && clearTimeout(this.heartInterval);
+            if (this.heartInterval) {
+                clearTimeout(this.heartInterval);
+            }
             this.isFirstFetchAfterConnect = true;
         },
     },

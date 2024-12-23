@@ -28,11 +28,11 @@ public:
 
 class DS18B20ListClass {
 public:
-    DS18B20ListClass() { }
+    DS18B20ListClass();
     void init(Scheduler& scheduler);
-    void loop();
 
 private:
+    void loop();
     void scanSensors();
     void readTemperature();
 
