@@ -73,7 +73,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
     }
 
     AsyncJsonResponse* response = new AsyncJsonResponse();
-    JsonObject retMsg = response->getRoot();
+    auto& retMsg = response->getRoot();
     retMsg["type"] = "warning";
 
     if (!request->hasParam("data", true)) {
@@ -85,13 +85,6 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
 
     String json = request->getParam("data", true)->value();
 
-    if (json.length() > 128 * (1 + Configuration.getConfiguredSensorCnt())) {
-        retMsg["message"] = "Data too large!";
-        retMsg["code"] = WebApiError::GenericDataTooLarge;
-        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-        return;
-    }
-
     JsonDocument root;
     DeserializationError error = deserializeJson(root, json);
 
@@ -102,7 +95,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
         return;
     }
 
-    if (!(root["pollinterval"].is<JsonObject>() && root["fahrenheit"].is<JsonObject>() && root["sensors"].is<JsonObject>())) {
+    if (!(root["pollinterval"].is<uint16_t>() && root["fahrenheit"].is<bool>() && root["sensors"].is<JsonArray>())) {
         retMsg["message"] = "Values are missing!";
         retMsg["code"] = WebApiError::GenericValueMissing;
         WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
@@ -131,7 +124,8 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
         if (sensor.isNull()) {
             break;
         }
-        if (!(sensor["serial"].is<JsonObject>() && sensor["connected"].is<JsonObject>() && sensor["name"].is<JsonObject>() && strlen(sensor["name"]) > 0)) {
+
+        if (!(sensor["serial"].is<String>() && sensor["connected"].is<bool>() && sensor["name"].is<String>() && strlen(sensor["name"]) > 0)) {
             retMsg["message"] = "Values are missing!";
             retMsg["code"] = WebApiError::GenericValueMissing;
             WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
@@ -139,31 +133,28 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
         }
     }
 
-    auto guard = Configuration.getWriteGuard();
-    auto& config = guard.getConfig();
+    {
+        auto guard = Configuration.getWriteGuard();
+        auto& config = guard.getConfig();
 
-    config.DS18B20.PollInterval = root["pollinterval"].as<int>();
-    config.DS18B20.Fahrenheit = root["fahrenheit"].as<bool>();
-    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
-        JsonObject sensor = sensors[i].as<JsonObject>();
-        if (!sensor.isNull()) {
-            String s = sensor["serial"];
-            config.DS18B20.Sensors[i].Serial = strtoull(s.c_str(), 0, 16);
-            config.DS18B20.Sensors[i].Connected = sensor["connected"];
-            strlcpy(config.DS18B20.Sensors[i].Name, sensor["name"], sizeof(config.DS18B20.Sensors[i].Name));
-        } else {
-            // reset unused
-            config.DS18B20.Sensors[i].Serial = 0;
-            config.DS18B20.Sensors[i].Connected = false;
-            strlcpy(config.DS18B20.Sensors[i].Name, "undefined", sizeof(config.DS18B20.Sensors[i].Name));
+        config.DS18B20.PollInterval = root["pollinterval"].as<int>();
+        config.DS18B20.Fahrenheit = root["fahrenheit"].as<bool>();
+        for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+            JsonObject sensor = sensors[i].as<JsonObject>();
+            if (!sensor.isNull()) {
+                String s = sensor["serial"];
+                config.DS18B20.Sensors[i].Serial = strtoull(s.c_str(), 0, 16);
+                config.DS18B20.Sensors[i].Connected = sensor["connected"];
+                strlcpy(config.DS18B20.Sensors[i].Name, sensor["name"], sizeof(config.DS18B20.Sensors[i].Name));
+            } else {
+                // reset unused
+                config.DS18B20.Sensors[i].Serial = 0;
+                config.DS18B20.Sensors[i].Connected = false;
+                strlcpy(config.DS18B20.Sensors[i].Name, "undefined", sizeof(config.DS18B20.Sensors[i].Name));
+            }
         }
     }
-
-    retMsg["type"] = "success";
-    retMsg["message"] = "Settings saved!";
-    retMsg["code"] = WebApiError::GenericSuccess;
+    WebApi.writeConfig(retMsg);
 
     WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-
-    MqttSettings.performReconnect();
 }

@@ -32,6 +32,7 @@ void WebApiClass::init(Scheduler& scheduler)
     _webApiSysstatus.init(_server, scheduler);
     _webApiWebapp.init(_server, scheduler);
     _webApiWsConsole.init(_server, scheduler);
+    _webApiIotSensorData.init(_server, scheduler);
     _webApiWsLive.init(_server, scheduler);
 
     _server.begin();

@@ -16,6 +16,7 @@ DatastoreClass::DatastoreClass()
 
 void DatastoreClass::init(Scheduler& scheduler, IDataStoreDevice* device)
 {
+    _device = device;
     scheduler.addTask(_loopTask);
     _loopTask.enable();
 }

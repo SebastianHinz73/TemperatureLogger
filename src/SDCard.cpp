@@ -115,7 +115,7 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& r
         }
         if (fileSize - alreadySent - maxLen <= 0) {
             _file.close();
-            _mutex.unlock(); // TODO what if responseFiller is not called untill file end?
+            _mutex.unlock(); // TODO what if responseFiller is not called until file end?
         }
         return ret;
     };

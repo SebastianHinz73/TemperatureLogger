@@ -44,19 +44,6 @@ void DS18B20ListClass::init(Scheduler& scheduler)
     scheduler.addTask(_loopTask);
     _loopTask.enable();
 
-/* TODO blocks
-
-    MessageOutput.print("#1 ");
-
-    auto guard = Configuration.getWriteGuard();
-    MessageOutput.print("#3a ");
-    auto& config = guard.getConfig();
-    MessageOutput.print("#4 ");
-
-    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
-        config.DS18B20.Sensors[i].Connected = false;
-    }*/
-
     _ow.begin(pin.sensor_ds18b20);
     _sensors.setOneWire(&_ow);
     _sensors.begin();
