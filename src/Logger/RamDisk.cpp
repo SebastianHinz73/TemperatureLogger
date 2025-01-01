@@ -7,111 +7,6 @@
 #include "MessageOutput.h"
 #include "PinMapping.h"
 
-//////////////////////////////////////////
-PSRamSensorBuffer::PSRamSensorBuffer(u8_t* buffer, size_t size, u8_t* cache, size_t cacheSize, bool powerOn)
-    : _header((dataEntryHeader_t*)buffer)
-    , _cache(cache)
-    , _cacheSize(cacheSize)
-{
-    uint32_t elements = (size - sizeof(dataEntryHeader_t)) / sizeof(dataEntry_t);
-    MessageOutput.printf("elements in use %d\r\n", _header->last - _header->first);
-
-    if (!powerOn) {
-        return;
-    }
-    // https://www.esp32.com/viewtopic.php?t=35063
-
-    _header->start = (dataEntry_t*)(buffer + sizeof(dataEntryHeader_t));
-    _header->first = _header->start;
-    _header->last = _header->start;
-
-    _header->end = &_header->start[elements]; // TODO calculate, zero memory
-    //_header->cache = (dataEntryEnd_t*)&buffer[size - sizeof(dataEntryEnd_t)];
-    memset(_cache, 0, _cacheSize);
-}
-
-void PSRamSensorBuffer::writeValue(uint16_t serial, time_t time, float value)
-{
-    _header->last->serial = serial;
-    _header->last->time = time;
-    _header->last->value = value;
-    MessageOutput.printf("writeValue1: ");
-    debugPrint(_header->last);
-    _header->last++;
-    // MessageOutput.printf("writeValue1: _header->start(%d), _header->first(%d), _header->last(%d), _header->end(%d)\r\n", toIndex(_header->start), toIndex(_header->first), toIndex(_header->last), toIndex(_header->end));
-    MessageOutput.printf("### &header: 0x%x\r\n", &_header);
-    MessageOutput.printf("### header: 0x%x\r\n", _header);
-    MessageOutput.printf("### start: 0x%x\r\n", _header->start);
-    MessageOutput.printf("### end: 0x%x\r\n", _header->end);
-    MessageOutput.printf("### first: 0x%x\r\n", _header->first);
-    MessageOutput.printf("### last: 0x%x\r\n", _header->last);
-    MessageOutput.printf("### in use: %d\r\n", _header->last - _header->first);
-
-    // last on end -> begin with start
-    if (_header->last == _header->end) {
-        _header->last = _header->start;
-    }
-
-    // last overwrites first -> increase first
-    if (_header->last == _header->first) {
-        _header->first++;
-        if (_header->first == _header->end) {
-            _header->first = _header->start;
-        }
-    }
-
-    uint32_t sum = 0;
-    for (uint32_t i = 0; i < 64 * 1024; i++) {
-        sum += _cache[i];
-    }
-    MessageOutput.printf("sum %d\r\n", sum);
-    // MessageOutput.printf("writeValue2: _header->start(%d), _header->first(%d), _header->last(%d), _header->end(%d)\r\n", toIndex(_header->start), toIndex(_header->first), toIndex(_header->last), toIndex(_header->end));
-}
-
-int PSRamSensorBuffer::toIndex(const dataEntry_t* entry)
-{
-    return (entry - _header->start);
-}
-
-void PSRamSensorBuffer::debugPrint(const dataEntry_t* entry)
-{
-    MessageOutput.printf("## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(entry), entry->serial, entry->time, entry->value);
-}
-
-bool PSRamSensorBuffer::getEntry(uint16_t serial, time_t time, dataEntry_t*& act)
-{
-    // start with _header->first, then increment
-    if (act == nullptr) {
-        act = _header->first;
-    } else if (act == _header->last) {
-        return false;
-    } else {
-        act++;
-    }
-
-    for (int i = 0; i < 2; i++) {
-        while (act < _header->end) {
-
-            // end check
-            if (act->time >= time + 24 * 60 * 60 || act == _header->last) {
-                return false;
-            }
-
-            // serial && time check
-            if (serial != act->serial || act->time < time) {
-                act++;
-                continue;
-            }
-
-            return true;
-        }
-        act = _header->start; // start again with _header->start
-    }
-    return false;
-}
-
-//////////////////////////////////////////
-
 RamDiskClass* pRamDisk = nullptr;
 
 u8_t* RamDiskClass::_ramDisk = nullptr;
@@ -121,20 +16,12 @@ size_t RamDiskClass::_cacheSize = 0;
 
 RamDiskClass::RamDiskClass()
 {
-    MessageOutput.printf("RamDiskClass 0x%x, %d => %d\r\n", _ramDisk, _ramDiskSize, _ramDisk[0]);
-
-    dataEntryHeader_t* header = (dataEntryHeader_t*)_ramDisk;
-
-    if (header->id == RAMDISK_HEADER_ID) {
-        MessageOutput.printf("Reset Try to restore data\r\n");
-        _psRamSensorBuffer = new PSRamSensorBuffer(_ramDisk, _ramDiskSize, _cache, _cacheSize, false);
-        // TODO checks
+    _ramBuffer = new RamBuffer(_ramDisk, _ramDiskSize, _cache, _cacheSize);
+    if (!_ramBuffer->IntegrityCheck()) {
+        MessageOutput.printf("Initialize empty RamDisk with %d entries.\r\n", _ramBuffer->getSize());
+        _ramBuffer->PowerOnInitialize();
     } else {
-        header->id = RAMDISK_HEADER_ID;
-
-        MessageOutput.printf("Power On Reset\r\n");
-
-        _psRamSensorBuffer = new PSRamSensorBuffer(_ramDisk, _ramDiskSize, _cache, _cacheSize, true);
+        MessageOutput.printf("Initialize RamDisk. %d entries found. %f percent used.\r\n", _ramBuffer->getUsed(), _ramBuffer->getUsed() * 100.0f / _ramBuffer->getSize());
     }
 }
 
@@ -154,7 +41,7 @@ void RamDiskClass::AllocateRamDisk()
         delete[] dummy;
     } else // use normal RAM
     {
-        _ramDiskSize = 500;
+        _ramDiskSize = 4096;
         _ramDisk = new u8_t[_ramDiskSize];
         _cacheSize = 0;
         _cache = nullptr;
@@ -176,7 +63,7 @@ void RamDiskClass::FreeRamDisk()
 void RamDiskClass::writeValue(uint16_t serial, time_t time, float value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    _psRamSensorBuffer->writeValue(serial, time, value);
+    _ramBuffer->writeValue(serial, time, value);
 }
 
 bool RamDiskClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
@@ -201,7 +88,7 @@ bool RamDiskClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& 
 
         // MessageOutput.printf("RamDiskClass::getFile responseFiller maxLen:%d, alreadySent:%d, fileSize:%d, maxCnt:%d\r\n", maxLen, alreadySent, fileSize, maxCnt);
         for (size_t cnt = 0; cnt < maxCnt; cnt++) {
-            if (!_psRamSensorBuffer->getEntry(serial, start_of_day, act)) {
+            if (!_ramBuffer->getEntry(serial, start_of_day, act)) {
                 break;
             }
             int h = (act->time - start_of_day) / 3600;

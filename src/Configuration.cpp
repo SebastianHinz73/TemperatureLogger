@@ -357,8 +357,6 @@ CONFIG_T const& ConfigurationClass::get()
 
 ConfigurationClass::WriteGuard ConfigurationClass::getWriteGuard()
 {
-    MessageOutput.println("getWriteGuard");
-
     return WriteGuard();
 }
 
@@ -435,15 +433,12 @@ CONFIG_T& ConfigurationClass::WriteGuard::getConfig()
 ConfigurationClass::WriteGuard::WriteGuard()
     : _lock(sWriterMutex)
 {
-    MessageOutput.println("WriteGuard");
-    
     sWriterCount++;
     sWriterCv.wait(_lock);
 }
 
 ConfigurationClass::WriteGuard::~WriteGuard()
 {
-    MessageOutput.println("~WriteGuard");
     sWriterCount--;
     if (sWriterCount == 0) {
         sWriterCv.notify_all();
