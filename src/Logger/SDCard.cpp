@@ -3,12 +3,12 @@
  * Copyright (C) 2023 Sebastian Hinz
  */
 
-#include "SDCard.h"
+#include "Logger/SDCard.h"
+#include "Datastore.h"
 #include "MessageOutput.h"
-#include <Datastore.h>
-#include <PinMapping.h>
+#include "PinMapping.h"
 
-SDCardClass SDCard;
+SDCardClass* pSDCard = nullptr;
 
 SDCardClass::SDCardClass()
     : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&SDCardClass::loop, this))

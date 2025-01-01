@@ -47,15 +47,13 @@ void MqttHandleDS18B20Class::loop()
         }
 
         for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
-            if (!config.DS18B20.Sensors[i].Connected) {
-                continue;
-            }
             uint32_t time = 0;
             float value = 0;
-            Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
-
-            MqttSettings.publish(_macAddr + "/" + String(config.DS18B20.Sensors[i].Serial, 16), String(value));
-            MessageOutput.printf("MQTT %s -> %s\r\n", String(config.DS18B20.Sensors[i].Serial, 16).c_str(), String(value).c_str());
+            if(Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value))
+            {
+                MqttSettings.publish(_macAddr + "/" + String(config.DS18B20.Sensors[i].Serial, 16), String(value));
+                MessageOutput.printf("MQTT %s -> %s\r\n", String(config.DS18B20.Sensors[i].Serial, 16).c_str(), String(value).c_str());
+            }
         }
 
         _lastPublish = millis();

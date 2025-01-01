@@ -58,7 +58,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminGet(AsyncWebServerRequest* request)
         if (config.DS18B20.Sensors[i].Serial != 0) {
             JsonObject sensor = sensors[i].to<JsonObject>();
             sensor["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
-            sensor["connected"] = config.DS18B20.Sensors[i].Connected;
+            sensor["connected"] = Datastore.validSensor(config.DS18B20.Sensors[i].Serial);
             sensor["name"] = config.DS18B20.Sensors[i].Name;
         }
     }
@@ -144,12 +144,10 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
             if (!sensor.isNull()) {
                 String s = sensor["serial"];
                 config.DS18B20.Sensors[i].Serial = strtoull(s.c_str(), 0, 16);
-                config.DS18B20.Sensors[i].Connected = sensor["connected"];
                 strlcpy(config.DS18B20.Sensors[i].Name, sensor["name"], sizeof(config.DS18B20.Sensors[i].Name));
             } else {
                 // reset unused
                 config.DS18B20.Sensors[i].Serial = 0;
-                config.DS18B20.Sensors[i].Connected = false;
                 strlcpy(config.DS18B20.Sensors[i].Name, "undefined", sizeof(config.DS18B20.Sensors[i].Name));
             }
         }

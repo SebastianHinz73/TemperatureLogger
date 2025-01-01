@@ -84,7 +84,6 @@ bool ConfigurationClass::write()
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         JsonObject sensor = sensors[i].to<JsonObject>();
         sensor["serial"] = config.DS18B20.Sensors[i].Serial;
-        sensor["connected"] = config.DS18B20.Sensors[i].Connected;
         sensor["name"] = config.DS18B20.Sensors[i].Name;
     }
 
@@ -241,7 +240,6 @@ bool ConfigurationClass::read()
         JsonObject sensor = sensors[i].as<JsonObject>();
         config.DS18B20.Sensors[i].Serial = sensor["serial"] | 0U;
         strlcpy(config.DS18B20.Sensors[i].Name, sensor["name"] | "undefined", sizeof(config.DS18B20.Sensors[i].Name));
-        config.DS18B20.Sensors[i].Connected = sensor["connected"] | false;
     }
     JsonObject mqtt_lwt = mqtt["lwt"];
     strlcpy(config.Mqtt.Lwt.Topic, mqtt_lwt["topic"] | MQTT_LWT_TOPIC, sizeof(config.Mqtt.Lwt.Topic));
@@ -367,7 +365,7 @@ ConfigurationClass::WriteGuard ConfigurationClass::getWriteGuard()
 DS18B20SENSOR_CONFIG_T* ConfigurationClass::getFirstDS18B20Config()
 {
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
-        if (config.DS18B20.Sensors[i].Serial != 0 && config.DS18B20.Sensors[i].Connected) {
+        if (config.DS18B20.Sensors[i].Serial != 0) {
             return &config.DS18B20.Sensors[i];
         }
     }
@@ -412,7 +410,6 @@ bool ConfigurationClass::addSensor(uint16_t serial)
     }
 
     if (actSensor != nullptr) {
-        actSensor->Connected = true;
         actSensor->Serial = serial;
     }
 

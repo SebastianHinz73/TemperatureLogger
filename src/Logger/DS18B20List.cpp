@@ -3,13 +3,13 @@
  * Copyright (C) 2023 Sebastian Hinz
  */
 
-#include "DS18B20List.h"
-#include "Configuration.h"
-#include "Crc16.h"
+#include "Logger/DS18B20List.h"
 #include "Datastore.h"
+#include "Logger/Crc16.h"
 #include "MessageOutput.h"
 #include "PinMapping.h"
 #include <AsyncJson.h>
+#include <Configuration.h>
 
 #define TEMPERATURE_PRECISION 12
 #define TIME_SCAN_NEW_SENSORS 60

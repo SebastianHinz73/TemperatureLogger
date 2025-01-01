@@ -4,7 +4,7 @@
  */
 #include "WebApi_sysstatus.h"
 #include "Configuration.h"
-#include "DS18B20List.h"
+#include "Logger/DS18B20List.h"
 #include "NetworkSettings.h"
 #include "PinMapping.h"
 #include "WebApi.h"
@@ -13,7 +13,6 @@
 #include <CpuTemperature.h>
 #include <LittleFS.h>
 #include <ResetReason.h>
-
 
 void WebApiSysstatusClass::init(AsyncWebServer& server, Scheduler& scheduler)
 {
@@ -60,7 +59,9 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     };
     for (char const* task_name : task_names) {
         TaskHandle_t const handle = xTaskGetHandle(task_name);
-        if (!handle) { continue; }
+        if (!handle) {
+            continue;
+        }
         JsonObject task = taskDetails.add<JsonObject>();
         task["name"] = task_name;
         task["stack_watermark"] = uxTaskGetStackHighWaterMark(handle);
@@ -84,7 +85,6 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     root["pioenv"] = PIOENV;
 
     root["uptime"] = esp_timer_get_time() / 1000000;
-
 
     WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 }

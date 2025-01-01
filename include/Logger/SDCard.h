@@ -43,4 +43,4 @@ private:
     File _file; // used by getFile
     std::mutex _mutex;
 };
-extern SDCardClass SDCard;
+extern SDCardClass* pSDCard;

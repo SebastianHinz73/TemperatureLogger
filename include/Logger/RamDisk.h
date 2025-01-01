@@ -7,44 +7,61 @@
 #include <mutex>
 #include <vector>
 
+#pragma pack(2)
 typedef struct
 {
-    int serial;
+    uint16_t serial;
     time_t time;
     float value;
-} dataEntry_t;
+} dataEntry_t; // 2 + 4 + 4 => 10 Bytes
 
-class MyCircularBuffer {
+typedef struct
+{
+    uint32_t buffer[64 * 1024 / sizeof(uint32_t)]; // used to trigger flush of PSRAM cache ( https://www.esp32.com/viewtopic.php?t=35063 )
+} dataEntryEnd_t;
+
+typedef struct
+{
+    uint32_t id;
+    dataEntry_t* start;
+    dataEntry_t* first;
+    dataEntry_t* last;
+    dataEntry_t* end;
+} dataEntryHeader_t;
+
+#pragma pack()
+
+class PSRamSensorBuffer {
 public:
-    MyCircularBuffer(int elements);
-    ~MyCircularBuffer();
+    PSRamSensorBuffer(u8_t* buffer, size_t size, u8_t* cache, size_t cacheSize, bool powerOn);
 
     void writeValue(uint16_t serial, time_t time, float value);
-    int getEntryCnt(uint16_t serial, time_t time);
     bool getEntry(uint16_t serial, time_t time, dataEntry_t*& act);
 
 private:
     int toIndex(const dataEntry_t* act);
     void debugPrint(const dataEntry_t* act);
 
-private:
-    dataEntry_t* _start;
-    dataEntry_t* _first;
-    dataEntry_t* _last;
-    dataEntry_t* _end;
+public:
+    dataEntryHeader_t* _header;
+    u8_t* _cache;
+    size_t _cacheSize;
 };
 
 ////////////////////////
 #define ENTRY_TO_STRING_SIZE 15
+#define RAMDISK_HEADER_ID 0x12345678
 
 class RamDiskClass : public IDataStoreDevice {
 public:
-    RamDiskClass()
+    RamDiskClass();
+    ~RamDiskClass()
     {
-        _myBuffer = std::make_unique<MyCircularBuffer>(5000); // 110 kb free
-        //_myBuffer = std::make_unique<MyCircularBuffer>(100); // 154 kb free
+        delete _psRamSensorBuffer;
     }
-    void init();
+
+    static void AllocateRamDisk();
+    static void FreeRamDisk();
 
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
@@ -55,8 +72,13 @@ private:
     time_t getStartOfDay(const tm& timeinfo);
 
 private:
-    std::unique_ptr<MyCircularBuffer> _myBuffer;
-
+    PSRamSensorBuffer* _psRamSensorBuffer;
     std::mutex _mutex;
+
+private:
+    static u8_t* _ramDisk;
+    static size_t _ramDiskSize;
+    static u8_t* _cache;
+    static size_t _cacheSize;
 };
 extern RamDiskClass* pRamDisk;

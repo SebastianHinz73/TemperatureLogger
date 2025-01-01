@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
-#include "Configuration.h"
 #include <DallasTemperature.h>
 #include <OneWire.h>
 #include <TaskSchedulerDeclarations.h>

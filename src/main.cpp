@@ -3,11 +3,11 @@
  * Copyright (C) 2022-2023 Thomas Basler and others
  */
 #include "Configuration.h"
-#include "DS18B20List.h"
 #include "Datastore.h"
 #include "Display_Graphic.h"
 #include "I18n.h"
 #include "Led_Single.h"
+#include "Logger/DS18B20List.h"
 #include "MessageOutput.h"
 #include "MqttHandleDS18B20.h"
 #include "MqttHandleHass.h"
@@ -15,9 +15,9 @@
 #include "NetworkSettings.h"
 #include "NtpSettings.h"
 #include "PinMapping.h"
-#include "RamDisk.h"
-#include "SDCard.h"
+#include "Logger/RamDisk.h"
 #include "RestartHelper.h"
+#include "Logger/SDCard.h"
 #include "Scheduler.h"
 #include "Utils.h"
 #include "WebApi.h"
@@ -39,6 +39,8 @@ void setup()
     SpiManagerInst.register_bus(SPI3_HOST);
 #endif
 
+    RamDiskClass::AllocateRamDisk();
+
     // Initialize serial output
     Serial.begin(SERIAL_BAUDRATE);
 #if !ARDUINO_USB_CDC_ON_BOOT
@@ -48,7 +50,7 @@ void setup()
 #endif
     MessageOutput.init(scheduler);
     MessageOutput.println();
-    MessageOutput.println("Starting OpenDTU");
+    MessageOutput.println("Starting Logger");
 
     // Initialize file system
     MessageOutput.print("Initialize FS... ");
@@ -128,7 +130,7 @@ void setup()
             pin.display_clk,
             pin.display_cs,
             pin.display_reset);
-    Display.setDiagramMode(static_cast<DiagramMode_t>(config.Display.Diagram.Mode));
+        Display.setDiagramMode(static_cast<DiagramMode_t>(config.Display.Diagram.Mode));
         Display.setOrientation(config.Display.Rotation);
         Display.enablePowerSafe = config.Display.PowerSafe;
         Display.enableScreensaver = config.Display.ScreenSaver;
@@ -146,14 +148,18 @@ void setup()
 
     if (pin.sd_enabled) {
         MessageOutput.print("Initialize SD card ... ");
-        SDCard.init(scheduler);
-        Datastore.init(scheduler, static_cast<IDataStoreDevice*>(&SDCard));
+        pSDCard = new SDCardClass();
+        pSDCard->init(scheduler);
+        Datastore.init(static_cast<IDataStoreDevice*>(pSDCard));
         MessageOutput.println("done");
+        RamDiskClass::FreeRamDisk();
     } else {
+        // https://esp32.com/viewtopic.php?t=11767
+        // PSRAM enthält Daten auch nach Reset
         MessageOutput.print("Initialize Ram disk ... ");
+
         pRamDisk = new RamDiskClass();
-        pRamDisk->init();
-        Datastore.init(scheduler, static_cast<IDataStoreDevice*>(pRamDisk));
+        Datastore.init(static_cast<IDataStoreDevice*>(pRamDisk));
         MessageOutput.println("done");
     }
     RestartHelper.init(scheduler);

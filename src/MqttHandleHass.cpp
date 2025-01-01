@@ -9,7 +9,7 @@
 #include "Utils.h"
 #include "__compiled_constants.h"
 #include "defaults.h"
-#include "DS18B20List.h"
+#include "Logger/DS18B20List.h"
 
 MqttHandleHassClass MqttHandleHass;
 
