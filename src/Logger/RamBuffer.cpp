@@ -49,7 +49,6 @@ bool RamBuffer::IntegrityCheck()
     }
 
     dataEntry_t* act = _header->first;
-    time_t minTime = 0;
 
     for (int i = 0; i < 2; i++) {
         while (act < _header->end) {
@@ -61,11 +60,6 @@ bool RamBuffer::IntegrityCheck()
                 MessageOutput.println("RamBuffer Value out of range");
                 return false;
             }
-            if (minTime > act->time) {
-                MessageOutput.println("RamBuffer time mismatch");
-                return false;
-            }
-            minTime = act->time;
 
             act++;
         }
@@ -81,11 +75,9 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
     _header->last->serial = serial;
     _header->last->time = time;
     _header->last->value = value;
-    MessageOutput.printf("writeValue1: ");
-    MessageOutput.printf("## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
+    // MessageOutput.printf("writeValue: ## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
 
     _header->last++;
-    MessageOutput.printf("### in use: %d\r\n", _header->last - _header->first);
 
     // last on end -> begin with start
     if (_header->last == _header->end) {
@@ -106,7 +98,7 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
         for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
             sum += ((uint32_t*)_cache)[i];
         }
-        MessageOutput.printf("sum %d\r\n", sum);
+        // MessageOutput.printf("sum %d\r\n", sum);
     }
 }
 

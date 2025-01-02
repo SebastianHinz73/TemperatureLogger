@@ -8,6 +8,8 @@
 #include "I18n.h"
 #include "Led_Single.h"
 #include "Logger/DS18B20List.h"
+#include "Logger/RamDisk.h"
+#include "Logger/SDCard.h"
 #include "MessageOutput.h"
 #include "MqttHandleDS18B20.h"
 #include "MqttHandleHass.h"
@@ -15,9 +17,7 @@
 #include "NetworkSettings.h"
 #include "NtpSettings.h"
 #include "PinMapping.h"
-#include "Logger/RamDisk.h"
 #include "RestartHelper.h"
-#include "Logger/SDCard.h"
 #include "Scheduler.h"
 #include "Utils.h"
 #include "WebApi.h"
@@ -140,11 +140,9 @@ void setup()
         MessageOutput.println("done");
     }
 
-    if (pin.sensor_ds18b20 != -1) {
-        MessageOutput.print("Initialize DS18B20 ... ");
-        DS18B20List.init(scheduler);
-        MessageOutput.println("done");
-    }
+    MessageOutput.print("Initialize DS18B20 ... ");
+    DS18B20List.init(scheduler);
+    MessageOutput.println("done");
 
     if (pin.sd_enabled) {
         MessageOutput.print("Initialize SD card ... ");

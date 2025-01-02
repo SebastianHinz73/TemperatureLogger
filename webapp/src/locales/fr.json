@@ -34,7 +34,7 @@
         "Close": "Fermer"
     },
     "wait": {
-        "NotReady": "TemperatureLogger is not yet ready",
+        "NotReady": "Logger is not yet ready",
         "PleaseWait": "Please wait. You will be automatically redirected to the home page."
     },
     "Error": {
@@ -232,6 +232,7 @@
         "Size": "Taille",
         "Heap": "Heap",
         "PsRam": "PSRAM",
+        "RamDisk": "RamDisk",
         "LittleFs": "LittleFs",
         "Sketch": "Sketch"
     },

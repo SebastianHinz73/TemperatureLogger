@@ -4,6 +4,7 @@
 #include <Arduino.h>
 #include <ETH.h>
 #include <stdint.h>
+#include <vector>
 
 #define PINMAPPING_FILENAME "/pin_mapping.json"
 #define PINMAPPING_LED_COUNT 2
@@ -38,13 +39,17 @@ struct PinMapping_t {
 
     int8_t led[PINMAPPING_LED_COUNT];
 
-    int sensor_ds18b20;
-
     bool sd_enabled;
     int sd_sck;
     int sd_miso;
     int sd_mosi;
     int sd_cs;
+
+    int sensor_ds18b20_1;
+    int sensor_ds18b20_2;
+    int sensor_ds18b20_3;
+    int sensor_ds18b20_4;
+    int sensor_ds18b20_5;
 };
 
 class PinMappingClass {
@@ -52,6 +57,7 @@ public:
     PinMappingClass();
     bool init(const String& deviceMapping);
     PinMapping_t& get();
+    std::vector<int> getDS18B20List();
 
     bool isValidW5500Config() const;
 #if CONFIG_ETH_USE_ESP32_EMAC

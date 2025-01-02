@@ -188,7 +188,7 @@
         "SdkVersion": "SDK Version",
         "ConfigVersion": "Config Version",
         "FirmwareVersion": "Firmware Version / Git Hash",
-        "TemploggerVersion": "TemperatureLogger Version",
+        "TemploggerVersion": "Logger Version",
         "PioEnv": "PIO Environment",
         "FirmwareVersionHint": "Click here to show information about your current version",
         "FirmwareUpdate": "Firmware Update",
@@ -206,7 +206,9 @@
         "ChipRevision": "Chip Revision",
         "ChipCores": "Chip Cores",
         "CpuFrequency": "CPU Frequency",
-        "Mhz": "MHz"
+        "Mhz": "MHz",
+        "CpuTemperature": "CPU Temperature",
+        "FlashSize": "Flash Memory Size"
     },
     "memoryinfo": {
         "MemoryInformation": "Memory Information",
@@ -217,6 +219,7 @@
         "Size": "Size",
         "Heap": "Heap",
         "PsRam": "PSRAM",
+        "RamDisk": "RamDisk",
         "LittleFs": "LittleFs",
         "Sketch": "Sketch"
     },

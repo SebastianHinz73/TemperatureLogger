@@ -61,7 +61,6 @@
 #define SD_CS -1
 #endif
 
-
 #ifndef W5500_MOSI
 #define W5500_MOSI -1
 #endif
@@ -150,18 +149,35 @@ PinMappingClass::PinMappingClass()
     _pinMapping.led[0] = LED0;
     _pinMapping.led[1] = LED1;
 
-    _pinMapping.sensor_ds18b20 = SENSOR_DS18B20;
-
     _pinMapping.sd_enabled = SD_ENABLED;
     _pinMapping.sd_sck = SD_SCK;
     _pinMapping.sd_miso = SD_MISO;
     _pinMapping.sd_mosi = SD_MOSI;
     _pinMapping.sd_cs = SD_CS;
+
+    _pinMapping.sensor_ds18b20_1 = SENSOR_DS18B20;
+    _pinMapping.sensor_ds18b20_2 = SENSOR_DS18B20;
+    _pinMapping.sensor_ds18b20_3 = SENSOR_DS18B20;
+    _pinMapping.sensor_ds18b20_4 = SENSOR_DS18B20;
+    _pinMapping.sensor_ds18b20_5 = SENSOR_DS18B20;
 }
 
 PinMapping_t& PinMappingClass::get()
 {
     return _pinMapping;
+}
+
+std::vector<int> PinMappingClass::getDS18B20List()
+{
+    static std::vector<int> list;
+    list.clear();
+    list.push_back(_pinMapping.sensor_ds18b20_1);
+    list.push_back(_pinMapping.sensor_ds18b20_2);
+    list.push_back(_pinMapping.sensor_ds18b20_3);
+    list.push_back(_pinMapping.sensor_ds18b20_4);
+    list.push_back(_pinMapping.sensor_ds18b20_5);
+
+    return list;
 }
 
 bool PinMappingClass::init(const String& deviceMapping)
@@ -216,7 +232,11 @@ bool PinMappingClass::init(const String& deviceMapping)
             _pinMapping.led[0] = doc[i]["led"]["led0"] | LED0;
             _pinMapping.led[1] = doc[i]["led"]["led1"] | LED1;
 
-            _pinMapping.sensor_ds18b20 = doc[i]["sensor"]["ds18b20"] | SENSOR_DS18B20;
+            _pinMapping.sensor_ds18b20_1 = doc[i]["sensor"]["ds18b20-1"] | SENSOR_DS18B20;
+            _pinMapping.sensor_ds18b20_2 = doc[i]["sensor"]["ds18b20-2"] | SENSOR_DS18B20;
+            _pinMapping.sensor_ds18b20_3 = doc[i]["sensor"]["ds18b20-3"] | SENSOR_DS18B20;
+            _pinMapping.sensor_ds18b20_4 = doc[i]["sensor"]["ds18b20-4"] | SENSOR_DS18B20;
+            _pinMapping.sensor_ds18b20_5 = doc[i]["sensor"]["ds18b20-5"] | SENSOR_DS18B20;
 
             _pinMapping.sd_enabled = doc[i]["sd"]["enabled"] | SD_ENABLED;
             _pinMapping.sd_sck = doc[i]["sd"]["sck"] | SD_SCK;

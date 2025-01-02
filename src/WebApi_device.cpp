@@ -88,7 +88,13 @@ void WebApiDeviceClass::onDeviceAdminGet(AsyncWebServerRequest* request)
     sdObj["cs"] = pin.sd_cs;
 
     auto sensorObj = curPin["sensor"].to<JsonObject>();
-    sensorObj["ds18b20"] = pin.sensor_ds18b20;
+
+    char tmp[24];
+    int i = 1;
+    for (const auto& pin : PinMapping.getDS18B20List()) {
+        sprintf(tmp, "ds18b20-%d", i++);
+        sensorObj[tmp] = pin;
+    }
 
     WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 }

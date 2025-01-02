@@ -22,6 +22,9 @@ public:
     static void AllocateRamDisk();
     static void FreeRamDisk();
 
+    size_t getSizeBytes() { return _ramBuffer->getTotalElements() * sizeof(dataEntry_t); }
+    size_t getUsedBytes() { return _ramBuffer->getUsedElements() * sizeof(dataEntry_t); }
+
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
     virtual bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);

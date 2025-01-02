@@ -5,6 +5,7 @@
 #include "WebApi_sysstatus.h"
 #include "Configuration.h"
 #include "Logger/DS18B20List.h"
+#include "Logger/RamDisk.h"
 #include "NetworkSettings.h"
 #include "PinMapping.h"
 #include "WebApi.h"
@@ -46,6 +47,9 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     root["sketch_used"] = ESP.getSketchSize();
     root["littlefs_total"] = LittleFS.totalBytes();
     root["littlefs_used"] = LittleFS.usedBytes();
+
+    root["ramdisk_total"] = pRamDisk != nullptr ? pRamDisk->getSizeBytes() : 0;
+    root["ramdisk_used"] = pRamDisk != nullptr ? pRamDisk->getUsedBytes() : 0;
 
     root["chiprevision"] = ESP.getChipRevision();
     root["chipmodel"] = ESP.getChipModel();

@@ -8,7 +8,7 @@
 
                 <BIconSun v-else width="30" height="30" class="d-inline-block align-text-top text-warning" />
 
-                <span style="margin-left: 0.5rem">TempLogger</span>
+                <span style="margin-left: 0.5rem">Logger</span>
             </router-link>
             <button
                 class="navbar-toggler"

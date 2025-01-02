@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #pragma once
 
+#include "DS18B20Pin.h"
 #include <DallasTemperature.h>
 #include <OneWire.h>
 #include <TaskSchedulerDeclarations.h>
@@ -8,22 +9,8 @@
 #include <memory>
 #include <vector>
 
-#define TEMP_LOGGER_VERSION "2.0.0Beta"
-
-class DS18B20 {
-public:
-    DS18B20(const DeviceAddress& addr, uint16_t serial)
-    {
-        memcpy(&_addr, addr, sizeof(_addr));
-        _serial = serial;
-    }
-
-public:
-    DeviceAddress _addr;
-    uint16_t _serial;
-};
-
-////////////////////////
+#define TEMP_LOGGER_VERSION "2.0.0"
+#define TIME_SCAN_NEW_SENSORS 60
 
 class DS18B20ListClass {
 public:
@@ -41,10 +28,7 @@ private:
     uint32_t _lastScan;
     uint32_t _lastTemperatureUpdate;
 
-    OneWire _ow;
-    DallasTemperature _sensors;
-
-    std::vector<std::unique_ptr<DS18B20>> _list;
+    std::vector<std::unique_ptr<DS18B20Pin>> _pins;
 };
 
 extern DS18B20ListClass DS18B20List;

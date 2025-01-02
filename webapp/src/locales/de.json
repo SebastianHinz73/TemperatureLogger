@@ -34,7 +34,7 @@
         "Close": "Schließen"
     },
     "wait": {
-        "NotReady": "TemperatureLogger ist noch nicht bereit",
+        "NotReady": "Logger ist noch nicht bereit",
         "PleaseWait": "Bitte warten. Sie werden automatisch auf die Startseite weitergeleitet."
     },
     "Error": {
@@ -188,7 +188,7 @@
         "SdkVersion": "SDK-Version",
         "ConfigVersion": "Konfigurationsversion",
         "FirmwareVersion": "Firmwareversion / git Hash",
-        "TemploggerVersion": "Temperaturloggerversion",
+        "TemploggerVersion": "Loggerversion",
         "PioEnv": "PIO Umgebung",
         "FirmwareVersionHint": "Klicken Sie hier, um Informationen über Ihre aktuelle Version anzuzeigen",
         "FirmwareUpdate": "Firmware-Aktualisierung",
@@ -219,6 +219,7 @@
         "Size": "Größe",
         "Heap": "Heap",
         "PsRam": "PSRAM",
+        "RamDisk": "RamDisk",
         "LittleFs": "LittleFs",
         "Sketch": "Sketch"
     },

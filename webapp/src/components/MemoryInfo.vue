@@ -23,6 +23,11 @@
                         :used="systemStatus.psram_used"
                     />
                     <FsInfo
+                        :name="$t('memoryinfo.RamDisk')"
+                        :total="systemStatus.ramdisk_total"
+                        :used="systemStatus.ramdisk_used"
+                    />
+                    <FsInfo
                         :name="$t('memoryinfo.LittleFs')"
                         :total="systemStatus.littlefs_total"
                         :used="systemStatus.littlefs_used"

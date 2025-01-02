@@ -18,10 +18,10 @@ RamDiskClass::RamDiskClass()
 {
     _ramBuffer = new RamBuffer(_ramDisk, _ramDiskSize, _cache, _cacheSize);
     if (!_ramBuffer->IntegrityCheck()) {
-        MessageOutput.printf("Initialize empty RamDisk with %d entries.\r\n", _ramBuffer->getSize());
+        MessageOutput.printf("Initialize empty RamDisk with %d entries.\r\n", _ramBuffer->getTotalElements());
         _ramBuffer->PowerOnInitialize();
     } else {
-        MessageOutput.printf("Initialize RamDisk. %d entries found. %f percent used.\r\n", _ramBuffer->getUsed(), _ramBuffer->getUsed() * 100.0f / _ramBuffer->getSize());
+        MessageOutput.printf("Initialize RamDisk. %d entries found. %.2f percent used.\r\n", _ramBuffer->getUsedElements(), _ramBuffer->getUsedElements() * 100.0f / _ramBuffer->getTotalElements());
     }
 }
 
@@ -30,6 +30,7 @@ void RamDiskClass::AllocateRamDisk()
     if (ESP.getPsramSize() > 0) // PSRAM available
     {
         _ramDiskSize = ESP.getPsramSize() * 0.8f;
+        //_ramDiskSize = 600;
         _ramDisk = new u8_t[_ramDiskSize];
 
         uint32_t dummySize = ESP.getPsramSize() * 0.1f;
