@@ -26,7 +26,7 @@ typedef struct
 
 class RamBuffer {
 public:
-    RamBuffer(u8_t* buffer, size_t size, u8_t* cache, size_t cacheSize);
+    RamBuffer(uint8_t* buffer, size_t size, uint8_t* cache, size_t cacheSize);
     void PowerOnInitialize();
     bool IntegrityCheck();
 
@@ -42,6 +42,6 @@ private:
 public:
     dataEntryHeader_t* _header;
     size_t _elements;
-    u8_t* _cache;
+    uint8_t* _cache;
     size_t _cacheSize;
 };

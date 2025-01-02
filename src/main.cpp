@@ -153,13 +153,14 @@ void setup()
         RamDiskClass::FreeRamDisk();
     } else {
         // https://esp32.com/viewtopic.php?t=11767
-        // PSRAM enthält Daten auch nach Reset
+        // PSRAM contains data also after reset
         MessageOutput.print("Initialize Ram disk ... ");
 
         pRamDisk = new RamDiskClass();
         Datastore.init(static_cast<IDataStoreDevice*>(pRamDisk));
         MessageOutput.println("done");
     }
+
     RestartHelper.init(scheduler);
 }
 

@@ -6,7 +6,7 @@
 #include "Logger/RamBuffer.h"
 #include "MessageOutput.h"
 
-RamBuffer::RamBuffer(u8_t* buffer, size_t size, u8_t* cache, size_t cacheSize)
+RamBuffer::RamBuffer(uint8_t* buffer, size_t size, uint8_t* cache, size_t cacheSize)
     : _header((dataEntryHeader_t*)buffer)
     , _elements((size - sizeof(dataEntryHeader_t)) / sizeof(dataEntry_t))
     , _cache(cache)

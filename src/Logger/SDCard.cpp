@@ -12,6 +12,7 @@ SDCardClass* pSDCard = nullptr;
 
 SDCardClass::SDCardClass()
     : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&SDCardClass::loop, this))
+    , _state(SDCardState_t::Init)
 {
 }
 
@@ -65,7 +66,7 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
     std::lock_guard<std::mutex> lock(_mutex);
 
     if (_state != SDCardState_t::InitOk) {
-        MessageOutput.println("SD card: writeValue invalid state.");
+        MessageOutput.printf("SD card: writeValue invalid state. %d\r\n", _state);
         return;
     }
     tm timeinfo;

@@ -23,7 +23,7 @@ void DS18B20ListClass::init(Scheduler& scheduler)
         }
     }
     if (_pins.size() == 0) {
-        MessageOutput.print("No configured DS18B20 pins found");
+        MessageOutput.print("No configured DS18B20 pins found ");
         return;
     }
 

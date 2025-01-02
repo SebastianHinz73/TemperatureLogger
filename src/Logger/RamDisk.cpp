@@ -9,19 +9,19 @@
 
 RamDiskClass* pRamDisk = nullptr;
 
-u8_t* RamDiskClass::_ramDisk = nullptr;
+uint8_t* RamDiskClass::_ramDisk = nullptr;
 size_t RamDiskClass::_ramDiskSize = 0;
-u8_t* RamDiskClass::_cache = nullptr;
+uint8_t* RamDiskClass::_cache = nullptr;
 size_t RamDiskClass::_cacheSize = 0;
 
 RamDiskClass::RamDiskClass()
 {
     _ramBuffer = new RamBuffer(_ramDisk, _ramDiskSize, _cache, _cacheSize);
     if (!_ramBuffer->IntegrityCheck()) {
-        MessageOutput.printf("Initialize empty RamDisk with %d entries.\r\n", _ramBuffer->getTotalElements());
+        MessageOutput.printf("Initialize empty RamDisk with %d entries. ", _ramBuffer->getTotalElements());
         _ramBuffer->PowerOnInitialize();
     } else {
-        MessageOutput.printf("Initialize RamDisk. %d entries found. %.2f percent used.\r\n", _ramBuffer->getUsedElements(), _ramBuffer->getUsedElements() * 100.0f / _ramBuffer->getTotalElements());
+        MessageOutput.printf("Initialize RamDisk. %d entries found. %.2f percent used. ", _ramBuffer->getUsedElements(), _ramBuffer->getUsedElements() * 100.0f / _ramBuffer->getTotalElements());
     }
 }
 
@@ -31,19 +31,19 @@ void RamDiskClass::AllocateRamDisk()
     {
         _ramDiskSize = ESP.getPsramSize() * 0.8f;
         //_ramDiskSize = 600;
-        _ramDisk = new u8_t[_ramDiskSize];
+        _ramDisk = new uint8_t[_ramDiskSize];
 
         uint32_t dummySize = ESP.getPsramSize() * 0.1f;
-        auto dummy = new u8_t[dummySize];
+        auto dummy = new uint8_t[dummySize];
 
         _cacheSize = 64 * 1024;
-        _cache = new u8_t[_cacheSize]; // (u8_t*)ps_malloc(_cacheSize);
+        _cache = new uint8_t[_cacheSize]; // (uint8_t*)ps_malloc(_cacheSize);
 
         delete[] dummy;
     } else // use normal RAM
     {
         _ramDiskSize = 4096;
-        _ramDisk = new u8_t[_ramDiskSize];
+        _ramDisk = new uint8_t[_ramDiskSize];
         _cacheSize = 0;
         _cache = nullptr;
     }

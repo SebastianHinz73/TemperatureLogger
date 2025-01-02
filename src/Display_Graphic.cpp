@@ -6,6 +6,7 @@
 #include "Configuration.h"
 #include "Datastore.h"
 #include "I18n.h"
+#include "MessageOutput.h"
 #include <NetworkSettings.h>
 #include <map>
 #include <time.h>
@@ -30,9 +31,6 @@ DisplayGraphicClass::DisplayGraphicClass()
 {
     _actSensorIndex = 0;
     _actPageTime = 0;
-
-    memset((char*)&_hallFifoData[0], 0, sizeof(_hallFifoData));
-    _hallIndex = 0;
 }
 
 DisplayGraphicClass::~DisplayGraphicClass()
@@ -61,28 +59,20 @@ void DisplayGraphicClass::init(Scheduler& scheduler, const DisplayType_t type, c
 
 void DisplayGraphicClass::calcLineHeights()
 {
-    bool diagram = (_isLarge && _diagram_mode == DiagramMode_t::Small);
-    // the diagram needs space. we need to keep
-    // away from the y-axis label in particular.
-    uint8_t yOff = (diagram ? 7 : 0);
+    uint8_t yOff = 0;
     for (uint8_t i = 0; i < 4; i++) {
         setFont(i);
-        yOff += _display->getAscent();
+        yOff += (_display->getMaxCharHeight());
         _lineOffsets[i] = yOff;
-        yOff += ((!_isLarge || diagram) ? 2 : 3);
-        // the descent is a negative value and moves the *next* line's
-        // baseline. the first line never uses a letter with descent and
-        // we need that space when showing the small diagram.
-        yOff -= ((i == 0 && diagram) ? 0 : _display->getDescent());
     }
 }
 
 void DisplayGraphicClass::setFont(const uint8_t line)
 {
     switch (line) {
-    case 0:
-        _display->setFont((_isLarge) ? u8g2_font_ncenB14_tr : u8g2_font_logisoso16_tr);
-        break;
+    // case 0:
+    //     _display->setFont((_isLarge) ? u8g2_font_ncenB14_tr : u8g2_font_logisoso16_tr);
+    //     break;
     case 3:
         _display->setFont(u8g2_font_5x8_tr);
         break;
@@ -99,33 +89,15 @@ bool DisplayGraphicClass::isValidDisplay()
 
 void DisplayGraphicClass::printText(const char* text, const uint8_t line)
 {
-    setFont(line);
-
     uint8_t dispX;
     if (!_isLarge) {
-        dispX = (line == 0) ? 5 : 0;
-    } else {
-        if (line == 0 && _diagram_mode == DiagramMode_t::Small) {
-            // Center between left border and diagram
-            dispX = (CHART_POSX - _display->getStrWidth(text)) / 2;
-        } else {
-            // Center on screen
-            dispX = (_display->getDisplayWidth() - _display->getStrWidth(text)) / 2;
-        }
-    }
-
-    if (enableScreensaver) {
-        unsigned maxOffset = (_isLarge ? 8 : 6);
-        unsigned period = 2 * maxOffset;
-        unsigned step = _mExtra % period;
-        int offset = (step <= maxOffset) ? step : (period - step);
-        offset -= (_isLarge ? 5 : 0); // oscillate around center on large screens
-        dispX += offset;
-    }
-
-    if (dispX > _display->getDisplayWidth()) {
         dispX = 0;
+    } else {
+        dispX = 5;
     }
+    setFont(line);
+
+    dispX += enableScreensaver ? (_mExtra % 7) : 0;
     _display->drawStr(dispX, _lineOffsets[line], text);
 }
 
@@ -204,14 +176,14 @@ void DisplayGraphicClass::loop()
 
     if (isHallDetected()) {
         _previousMillis = millis();
+        setStatus(true);
     }
 
     if ((millis() - _lastDisplayUpdate) > _period) {
-
         _display->clearBuffer();
         bool displayPowerSave = false;
 
-        auto config = Configuration.get();
+        auto& config = Configuration.get();
 
         uint32_t u32time;
         float value = 0;
@@ -235,13 +207,15 @@ void DisplayGraphicClass::loop()
                 break;
             }
         }
+
         _actPageTime = (_actPageTime + 1) % 3;
         if (_actPageTime == 0) {
             _actSensorIndex = sensorIndex;
         }
 
         //=====> IP or Date-Time ========
-        if (!(_mExtra % 10) && NetworkSettings.localIP()) {
+        // Change every 3 seconds
+        if (!(_mExtra % (3 * 2) < 3) && NetworkSettings.localIP()) {
             printText(NetworkSettings.localIP().toString().c_str(), 3);
         } else {
             // Get current time
@@ -283,28 +257,10 @@ void DisplayGraphicClass::setStatus(const bool turnOn)
 //////////////////////////////////////////////////////////////////////
 bool DisplayGraphicClass::isHallDetected()
 {
+#ifdef CONFIG_IDF_TARGET_ESP32S3
     return false;
-
-#if 0
-    u32_t Size = sizeof(_hallFifoData) / sizeof(int);
-
-    _hallFifoData[_hallIndex] = hallRead(); // Reads Hall sensor value
-    _hallIndex = (_hallIndex + 1) % Size;
-
-    int detect = 0;
-    for (int i = 0; i < Size; i++) {
-        if (_hallFifoData[i] < -10) {
-            detect++;
-        }
-    }
-
-    detect = detect > (0.5 * Size);
-    if (detect) {
-        memset((char*)&_hallFifoData[0], 0, sizeof(_hallFifoData));
-        _hallIndex = 0;
-    }
-
-    return detect;
+#else
+    return hallRead() < -10; // Reads Hall sensor value
 #endif
 }
 

@@ -5,14 +5,6 @@
 #include <TaskSchedulerDeclarations.h>
 #include <U8g2lib.h>
 
-#define CHART_HEIGHT 20 // chart area hight in pixels
-#define CHART_WIDTH 47 // chart area width in pixels
-
-// Left-Upper position of diagram is drawn
-// (text of Y-axis is display left of that pos)
-#define CHART_POSX 80
-#define CHART_POSY 0
-
 enum DisplayType_t {
     None,
     PCD8544,
@@ -74,8 +66,6 @@ private:
     bool _isLarge = false;
     uint8_t _lineOffsets[5];
     String _i18n_date_format;
-    int _hallFifoData[16]; // measure hall sensor and switch on display
-    int _hallIndex;
 };
 
 extern DisplayGraphicClass Display;

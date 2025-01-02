@@ -38,9 +38,9 @@ private:
     std::mutex _mutex;
 
 private:
-    static u8_t* _ramDisk;
+    static uint8_t* _ramDisk;
     static size_t _ramDiskSize;
-    static u8_t* _cache;
+    static uint8_t* _cache;
     static size_t _cacheSize;
 };
 extern RamDiskClass* pRamDisk;
