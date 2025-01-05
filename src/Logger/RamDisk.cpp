@@ -30,7 +30,6 @@ void RamDiskClass::AllocateRamDisk()
     if (ESP.getPsramSize() > 0) // PSRAM available
     {
         _ramDiskSize = ESP.getPsramSize() * 0.8f;
-        //_ramDiskSize = 600;
         _ramDisk = new uint8_t[_ramDiskSize];
 
         uint32_t dummySize = ESP.getPsramSize() * 0.1f;

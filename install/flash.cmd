@@ -1,17 +1,20 @@
 
 @echo off
 SET COMPORT=COM3
-
+SET ESP32TYPE=esp32
+SET BINFOLDER=generic_esp32
 
 :loop
 cls
 echo.
 echo Please select one of the following options:
 echo. 
-echo  1 - Change com port
-echo  2 - Get board info on %COMPORT%
-echo  3 - Flash Temperature Logger firmware %COMPORT%
-echo  4 - Delete flash %COMPORT%
+echo  1 - Change Com port - %COMPORT%
+echo  2 - Change Board Type - %ESP32TYPE%
+echo  3 - Get board info
+echo  4 - Flash Temperature Logger firmware
+echo  5 - Delete flash (program, configuration and pin mapping)
+echo  6 - Start serial console
 echo. 
 echo  x - Exit
 echo.
@@ -19,76 +22,49 @@ set /p SELECTED=Your choice:
 
 if "%SELECTED%" == "x" goto :eof
 if "%SELECTED%" == "1" goto :SetComPort
-if "%SELECTED%" == "2" goto :BoardInfo
-if "%SELECTED%" == "3" goto :TemperatureLogger
-if "%SELECTED%" == "4" goto :Delete
+if "%SELECTED%" == "2" goto :SelectBoardType
+if "%SELECTED%" == "3" goto :BoardInfo
+if "%SELECTED%" == "4" goto :TemperatureLogger
+if "%SELECTED%" == "5" goto :Delete
+if "%SELECTED%" == "6" goto :Serial
 goto :errorInput 
 
 
 :SetComPort
-echo  1 - Set com port1
-echo  2 - Set com port2
-echo  3 - Set com port3
-echo  4 - Set com port4
-echo  5 - Set com port5
-echo  6 - Set com port6
-echo  7 - Set com port7
-echo  8 - Set com port8
-echo  9 - Set com port9
-echo  10 - Set com port10
+echo  Enter 'x' for exit or COM port e.g. 'COM4'
+echo.
+set /p SELECTED=Your choice: 
+
+
+if "%SELECTED%" == "x" goto :loop
+set COMPORT=%SELECTED%
+
+goto :loop
+
+:SelectBoardType
+echo  1 - Set Type to ESP32
+echo  2 - Set Type to ESP32-S3
 echo  x - Exit
 echo.
 set /p SELECTED=Your choice: 
 
 if "%SELECTED%" == "x" goto :loop
 if "%SELECTED%" == "1" (
-set COMPORT=COM1
+set ESP32TYPE=esp32
+set BINFOLDER=generic_esp32
 goto :loop
 )
 if "%SELECTED%" == "2" (
-set COMPORT=COM2
+set ESP32TYPE=esp32-s3
+set BINFOLDER=generic_esp32s3_N16R8
 goto :loop
-)
-if "%SELECTED%" == "3" (
-set COMPORT=COM3
-goto :loop
-)
-if "%SELECTED%" == "4" (
-set COMPORT=COM4
-goto :loop
-)
-if "%SELECTED%" == "5" (
-set COMPORT=COM5
-goto :loop
-)
-if "%SELECTED%" == "6" (
-set COMPORT=COM6
-goto :loop
-)
-if "%SELECTED%" == "7" (
-set COMPORT=COM7
-goto :loop
-)
-if "%SELECTED%" == "8" (
-set COMPORT=COM8
-goto :loop
-)
-if "%SELECTED%" == "9" (
-set COMPORT=COM9
-goto :loop
-)
-if "%SELECTED%" == "10" (
-set COMPORT=COM10
-goto :loop 
 )
 goto :errorInput 
 
-pause
-goto :loop
 
 :BoardInfo
 @echo on
-esptool.exe --chip esp32 --port %COMPORT% chip_id
+esptool.exe --chip %ESP32TYPE% --port %COMPORT% chip_id
 @echo off
 echo.
 pause
@@ -96,7 +72,7 @@ goto :loop
 
 :TemperatureLogger
 @echo on
-esptool.exe -p %COMPORT% --chip esp32 write_flash 0x0 firmware.factory.bin
+esptool.exe -p %COMPORT% --chip %ESP32TYPE% write_flash 0x0 %BINFOLDER%\firmware.factory.bin
 
 @echo off
 echo.
@@ -105,7 +81,15 @@ goto :loop
 
 :Delete
 @echo on
-esptool.exe --port %COMPORT% --chip esp32 erase_flash
+esptool.exe --port %COMPORT% --chip %ESP32TYPE% erase_flash
+@echo off
+echo.
+pause
+goto :loop
+
+:Serial
+@echo on
+Putty\putty.exe -serial %COMPORT% -sercfg 115200,8,n,1,N
 @echo off
 echo.
 pause

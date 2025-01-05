@@ -34,7 +34,7 @@ void RamBuffer::PowerOnInitialize()
 bool RamBuffer::IntegrityCheck()
 {
     if (_header->id != RAMBUFFER_HEADER_ID) {
-        MessageOutput.printf("RamBuffer id not found 0x%x\r\n", _header->id);
+        MessageOutput.printf("RamBuffer 0x%x is not expected id 0x%x\r\n", _header->id, RAMBUFFER_HEADER_ID);
         return false;
     }
 

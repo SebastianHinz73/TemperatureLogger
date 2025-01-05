@@ -34,7 +34,7 @@ public:
     bool getEntry(uint16_t serial, time_t time, dataEntry_t*& act);
 
     size_t getTotalElements() { return _elements; }
-    size_t getUsedElements() { return _header->last > _header->start ? _header->last - _header->start : _elements - (_header->start - _header->last); }
+    size_t getUsedElements() { return _header->last >= _header->first ? _header->last - _header->first : _elements; }
 
 private:
     int toIndex(const dataEntry_t* entry) { return entry - _header->start; }
