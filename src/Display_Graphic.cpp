@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (C) 2023 Thomas Basler and others
+ * Copyright (C) 2023-2024 Thomas Basler and others
  */
 #include "Display_Graphic.h"
 #include "Configuration.h"
 #include "Datastore.h"
+#include "I18n.h"
 #include "MessageOutput.h"
 #include <NetworkSettings.h>
 #include <map>
@@ -15,29 +16,21 @@ std::map<DisplayType_t, std::function<U8G2*(uint8_t, uint8_t, uint8_t, uint8_t)>
     { DisplayType_t::SSD1306, [](uint8_t reset, uint8_t clock, uint8_t data, uint8_t cs) { return new U8G2_SSD1306_128X64_NONAME_F_HW_I2C(U8G2_R0, reset, clock, data); } },
     { DisplayType_t::SH1106, [](uint8_t reset, uint8_t clock, uint8_t data, uint8_t cs) { return new U8G2_SH1106_128X64_NONAME_F_HW_I2C(U8G2_R0, reset, clock, data); } },
     { DisplayType_t::SSD1309, [](uint8_t reset, uint8_t clock, uint8_t data, uint8_t cs) { return new U8G2_SSD1309_128X64_NONAME0_F_HW_I2C(U8G2_R0, reset, clock, data); } },
+    { DisplayType_t::ST7567_GM12864I_59N, [](uint8_t reset, uint8_t clock, uint8_t data, uint8_t cs) { return new U8G2_ST7567_ENH_DG128064I_F_HW_I2C(U8G2_R0, reset, clock, data); } },
 };
 
-// Language defintion, respect order in languages[] and translation lists
+// Language defintion, respect order in translation lists
 #define I18N_LOCALE_EN 0
 #define I18N_LOCALE_DE 1
 #define I18N_LOCALE_FR 2
 
-// Languages supported. Note: the order is important and must match locale_translations.h
-const uint8_t languages[] = {
-    I18N_LOCALE_EN,
-    I18N_LOCALE_DE,
-    I18N_LOCALE_FR
-};
-
 static const char* const i18n_date_format[] = { "%m/%d/%Y %H:%M", "%d.%m.%Y %H:%M", "%d/%m/%Y %H:%M" };
 
 DisplayGraphicClass::DisplayGraphicClass()
+    : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&DisplayGraphicClass::loop, this))
 {
     _actSensorIndex = 0;
     _actPageTime = 0;
-
-    memset((char*)&_hallFifoData[0], 0, sizeof(_hallFifoData));
-    _hallIndex = 0;
 }
 
 DisplayGraphicClass::~DisplayGraphicClass()
@@ -51,13 +44,14 @@ void DisplayGraphicClass::init(Scheduler& scheduler, const DisplayType_t type, c
     if (isValidDisplay()) {
         auto constructor = display_types[_display_type];
         _display = constructor(reset, clk, data, cs);
+        if (_display_type == DisplayType_t::ST7567_GM12864I_59N) {
+            _display->setI2CAddress(0x3F << 1);
+        }
         _display->begin();
         setContrast(DISPLAY_CONTRAST);
         setStatus(true);
 
         scheduler.addTask(_loopTask);
-        _loopTask.setCallback(std::bind(&DisplayGraphicClass::loop, this));
-        _loopTask.setIterations(TASK_FOREVER);
         _loopTask.setInterval(_period);
         _loopTask.enable();
     }
@@ -132,9 +126,35 @@ void DisplayGraphicClass::setOrientation(const uint8_t rotation)
     calcLineHeights();
 }
 
-void DisplayGraphicClass::setLanguage(const uint8_t language)
+void DisplayGraphicClass::setLocale(const String& locale)
 {
-    _display_language = language < sizeof(languages) / sizeof(languages[0]) ? language : DISPLAY_LANGUAGE;
+    _display_language = locale;
+    uint8_t idx = I18N_LOCALE_EN;
+    if (locale == "de") {
+        idx = I18N_LOCALE_DE;
+    } else if (locale == "fr") {
+        idx = I18N_LOCALE_FR;
+    }
+
+    _i18n_date_format = i18n_date_format[idx];
+
+    String notUsed;
+    I18n.readDisplayStrings(locale,
+        _i18n_date_format,
+        notUsed,
+        notUsed,
+        notUsed,
+        notUsed,
+        notUsed,
+        notUsed,
+        notUsed);
+}
+
+void DisplayGraphicClass::setDiagramMode(DiagramMode_t mode)
+{
+    if (mode < DiagramMode_t::DisplayMode_Max) {
+        _diagram_mode = mode;
+    }
 }
 
 void DisplayGraphicClass::setStartupDisplay()
@@ -153,18 +173,17 @@ void DisplayGraphicClass::loop()
     _loopTask.setInterval(_period);
 
     _display->clearBuffer();
-    bool displayPowerSave = false;
 
     if (isHallDetected()) {
         _previousMillis = millis();
+        setStatus(true);
     }
 
     if ((millis() - _lastDisplayUpdate) > _period) {
-
         _display->clearBuffer();
         bool displayPowerSave = false;
 
-        CONFIG_T& config = Configuration.get();
+        auto& config = Configuration.get();
 
         uint32_t u32time;
         float value = 0;
@@ -188,18 +207,20 @@ void DisplayGraphicClass::loop()
                 break;
             }
         }
+
         _actPageTime = (_actPageTime + 1) % 3;
         if (_actPageTime == 0) {
             _actSensorIndex = sensorIndex;
         }
 
         //=====> IP or Date-Time ========
-        if (!(_mExtra % 10) && NetworkSettings.localIP()) {
+        // Change every 3 seconds
+        if (!(_mExtra % (3 * 2) < 3) && NetworkSettings.localIP()) {
             printText(NetworkSettings.localIP().toString().c_str(), 3);
         } else {
             // Get current time
             time_t now = time(nullptr);
-            strftime(_fmtText, sizeof(_fmtText), i18n_date_format[_display_language], localtime(&now));
+            strftime(_fmtText, sizeof(_fmtText), _i18n_date_format.c_str(), localtime(&now));
             printText(_fmtText, 3);
         }
         _display->sendBuffer();
@@ -236,25 +257,11 @@ void DisplayGraphicClass::setStatus(const bool turnOn)
 //////////////////////////////////////////////////////////////////////
 bool DisplayGraphicClass::isHallDetected()
 {
-    u32_t Size = sizeof(_hallFifoData) / sizeof(int);
-
-    _hallFifoData[_hallIndex] = hallRead(); // Reads Hall sensor value
-    _hallIndex = (_hallIndex + 1) % Size;
-
-    int detect = 0;
-    for (int i = 0; i < Size; i++) {
-        if (_hallFifoData[i] < -10) {
-            detect++;
-        }
-    }
-
-    detect = detect > (0.5 * Size);
-    if (detect) {
-        memset((char*)&_hallFifoData[0], 0, sizeof(_hallFifoData));
-        _hallIndex = 0;
-    }
-
-    return detect;
+#ifdef CONFIG_IDF_TARGET_ESP32S3
+    return false;
+#else
+    return hallRead() < -10; // Reads Hall sensor value
+#endif
 }
 
 DisplayGraphicClass Display;

@@ -1,6 +1,6 @@
 <template>
     <BasePage :title="$t('ntpinfo.NtpInformation')" :isLoading="dataLoading" :show-reload="true" @reload="getNtpInfo">
-        <CardElement :text="$t('ntpinfo.ConfigurationSummary')" textVariant="text-bg-primary">
+        <CardElement :text="$t('ntpinfo.ConfigurationSummary')" textVariant="text-bg-primary" table>
             <div class="table-responsive">
                 <table class="table table-hover table-condensed">
                     <tbody>
@@ -21,14 +21,18 @@
             </div>
         </CardElement>
 
-        <CardElement :text="$t('ntpinfo.CurrentTime')" textVariant="text-bg-primary" add-space>
+        <CardElement :text="$t('ntpinfo.CurrentTime')" textVariant="text-bg-primary" add-space table>
             <div class="table-responsive">
                 <table class="table table-hover table-condensed">
                     <tbody>
                         <tr>
                             <th>{{ $t('ntpinfo.Status') }}</th>
                             <td>
-                                <StatusBadge :status="ntpDataList.ntp_status" true_text="ntpinfo.Synced" false_text="ntpinfo.NotSynced" />
+                                <StatusBadge
+                                    :status="ntpDataList.ntp_status"
+                                    true_text="ntpinfo.Synced"
+                                    false_text="ntpinfo.NotSynced"
+                                />
                             </td>
                         </tr>
                         <tr>
@@ -47,7 +51,7 @@
 import BasePage from '@/components/BasePage.vue';
 import CardElement from '@/components/CardElement.vue';
 import StatusBadge from '@/components/StatusBadge.vue';
-import type { NtpStatus } from "@/types/NtpStatus";
+import type { NtpStatus } from '@/types/NtpStatus';
 import { authHeader, handleResponse } from '@/utils/authentication';
 import { defineComponent } from 'vue';
 
@@ -69,7 +73,7 @@ export default defineComponent({
     methods: {
         getNtpInfo() {
             this.dataLoading = true;
-            fetch("/api/ntp/status", { headers: authHeader() })
+            fetch('/api/ntp/status', { headers: authHeader() })
                 .then((response) => handleResponse(response, this.$emitter, this.$router))
                 .then((data) => {
                     this.ntpDataList = data;

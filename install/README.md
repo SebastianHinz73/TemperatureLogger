@@ -1,20 +1,21 @@
 # Install Temperature Logger
 
-**Attention: At the moment only one board is supported.** (See [https://www.diy-temperature-logger.com/](https://www.diy-temperature-logger.com/))
+There are compiled binaries for an ESP32 and an ESP32-S3 N16R8 board, which has 8MByte PSRam.
 
-There are various ways to install the Temperature Logger. In the case of a completely new installation, OpenDTU can be installed and then updated to the Temperature Logger with the firmware.bin file. In the other case, the script flash.cmd can be used. To update, simply flash the firmware.bin file via the Firmware - Settings menu.
+Flash.cmd can be used for a completely new installation. The pin mapping must then be configured with a json file. An existing temperature logger can be updated with the menu Settings -> Firmware Upgrade. To do this, the firmware.bin file is needed
 
 ## Installation with flash.cmd
 
-1. Download the files flash.cmd, esptool.exe and firmware.factory.bin from the install folder.
+1. Download and extract the zip file
 2. Install driver for the board [https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads)
 
 ![DeviceManager](../docs/pics/device-manager.png)
-
 3. Run flash.cmd
-4. Change the COM port and flash the firmware. When ...... appears on the screen, the boot button on the board must be pressed.
+4. Change the COM port and the board type and flash the firmware. (On some boards the boot button must be pressed.)
 
 ![Install](../docs/pics/install.png)
+
+The Delete flash menu item can be useful if the board is in a reboot loop with an incorrect pin mapping.
 
 ## Configuration
 
@@ -22,3 +23,60 @@ There are various ways to install the Temperature Logger. In the case of a compl
 2. The page http:\\\192.168.4.1 may need to be opened manually in browser.
 3. Use admin and openDTU42 as username and password.
 4. The router can be entered in the Settings - Network Settings menu.
+
+## Pin Mapping
+
+The pins are configured after flashing a new board.
+
+1. Create pin_mapping.json
+2. Open Settings -> Config Management. Choose Pin Mapping and the created pin_mapping.json file. Restore the pin_mapping file.
+3. Open Settings -> Device Manager and change Selected Profile. Save the Selected Profile. Reset the board.
+
+pin_mapping.json
+
+```
+[
+    {
+        "name": "ESP32 Oled Wemos Board",
+        "display": {
+            "type": 2,
+            "data": 5,
+            "clk": 4,
+            "cs": 255,
+            "reset": 16
+        },
+        "sensor": {
+            "ds18b20-1": 25
+        },
+        "sd": {
+            "enabled": true,
+            "sck": 12,
+            "miso": 15,
+            "mosi": 13,
+            "cs": 14
+        }
+    },
+    {
+        "name": "No Display",
+        "sensor": {
+            "ds18b20-1": 25
+        },
+        "sd": {
+            "enabled": true,
+            "sck": 12,
+            "miso": 15,
+            "mosi": 13,
+            "cs": 14
+        }
+    },
+    {
+        "name": "ESP32-S3-Pin16-18",
+        "sensor": {
+            "ds18b20-1": 16,
+            "ds18b20-2": 17,
+            "ds18b20-3": 18
+        }
+    }
+]
+
+```

@@ -4,27 +4,20 @@
  */
 #include "WebApi_iot_sensor_data.h"
 #include "Configuration.h"
-#include "DS18B20List.h"
+#include "Logger/DS18B20List.h"
 #include "Datastore.h"
 #include "MessageOutput.h"
 #include "NetworkSettings.h"
-#include "SDCard.h"
 #include "WebApi.h"
 #include "defaults.h"
 #include <AsyncJson.h>
 
-void WebApiIotSensorData::init(AsyncWebServer& server)
+void WebApiIotSensorData::init(AsyncWebServer& server, Scheduler& scheduler)
 {
     using std::placeholders::_1;
 
-    _server = &server;
-
-    _server->on("/config", HTTP_GET, std::bind(&WebApiIotSensorData::onConfig, this, _1));
-    _server->on("/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
-}
-
-void WebApiIotSensorData::loop()
-{
+    server.on("/config", HTTP_GET, std::bind(&WebApiIotSensorData::onConfig, this, _1));
+    server.on("/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
 }
 
 void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
@@ -41,12 +34,12 @@ void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
         time_t now = time(nullptr);
         now -= sec_since_boot;
 
-        SDCard.getTmTime(&timeinfo, now, 5);
+        Datastore.getTmTime(&timeinfo, now, 5);
         strftime(buffer, sizeof(buffer), "%Y/%m/%d %H:%M:%S", &timeinfo);
         bootTime = buffer;
     }
 
-    CONFIG_T& config = Configuration.get();
+    auto config = Configuration.get();
     snprintf(buffer, sizeof(buffer), "1;%s;%s;%s;-1\n", NetworkSettingsClass::getHostname().c_str(), TEMP_LOGGER_VERSION, bootTime.c_str());
 
     String text = buffer;

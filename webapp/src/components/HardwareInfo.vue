@@ -1,5 +1,5 @@
 <template>
-    <CardElement :text="$t('hardwareinfo.HardwareInformation')" textVariant="text-bg-primary">
+    <CardElement :text="$t('hardwareinfo.HardwareInformation')" textVariant="text-bg-primary" table>
         <div class="table-responsive">
             <table class="table table-hover table-condensed">
                 <tbody>
@@ -18,6 +18,17 @@
                     <tr>
                         <th>{{ $t('hardwareinfo.CpuFrequency') }}</th>
                         <td>{{ systemStatus.cpufreq }} {{ $t('hardwareinfo.Mhz') }}</td>
+                    </tr>
+                    <tr v-if="systemStatus.cputemp">
+                        <th>{{ $t('hardwareinfo.CpuTemperature') }}</th>
+                        <td>{{ $n(systemStatus.cputemp, 'celsius') }}</td>
+                    </tr>
+                    <tr>
+                        <th>{{ $t('hardwareinfo.FlashSize') }}</th>
+                        <td>
+                            {{ $n(systemStatus.flashsize, 'byte') }}
+                            ({{ $n(systemStatus.flashsize / 1024 / 1024, 'megabyte') }})
+                        </td>
                     </tr>
                 </tbody>
             </table>

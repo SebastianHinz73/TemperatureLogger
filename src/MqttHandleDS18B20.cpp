@@ -11,11 +11,14 @@
 
 MqttHandleDS18B20Class MqttHandleDS18B20;
 
+MqttHandleDS18B20Class::MqttHandleDS18B20Class()
+    : _loopTask(TASK_IMMEDIATE, TASK_FOREVER, std::bind(&MqttHandleDS18B20Class::loop, this))
+{
+}
+
 void MqttHandleDS18B20Class::init(Scheduler& scheduler)
 {
     scheduler.addTask(_loopTask);
-    _loopTask.setCallback(std::bind(&MqttHandleDS18B20Class::loop, this));
-    _loopTask.setIterations(TASK_FOREVER);
     _loopTask.enable();
 }
 
@@ -44,15 +47,13 @@ void MqttHandleDS18B20Class::loop()
         }
 
         for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
-            if (!config.DS18B20.Sensors[i].Connected) {
-                continue;
-            }
             uint32_t time = 0;
             float value = 0;
-            Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
-
-            MqttSettings.publish(_macAddr + "/" + String(config.DS18B20.Sensors[i].Serial, 16), String(value));
-            MessageOutput.printf("MQTT %s -> %s\r\n", String(config.DS18B20.Sensors[i].Serial, 16).c_str(), String(value));
+            if(Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value))
+            {
+                MqttSettings.publish(_macAddr + "/" + String(config.DS18B20.Sensors[i].Serial, 16), String(value));
+                MessageOutput.printf("MQTT %s -> %s\r\n", String(config.DS18B20.Sensors[i].Serial, 16).c_str(), String(value).c_str());
+            }
         }
 
         _lastPublish = millis();

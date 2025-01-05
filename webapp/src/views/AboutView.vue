@@ -3,15 +3,25 @@
         <div class="accordion" id="accordionExample">
             <div class="accordion-item">
                 <h2 class="accordion-header" id="headingOne">
-                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne"
-                        aria-expanded="true" aria-controls="collapseOne">
-                        <span class="badge text-bg-secondary">
-                            <BIconInfoCircle class="fs-4" />
-                        </span>&nbsp;{{ $t('about.ProjectOrigin') }}
+                    <button
+                        class="accordion-button collapsed"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#collapseOne"
+                        aria-expanded="false"
+                        aria-controls="collapseOne"
+                    >
+                        <span class="badge text-bg-secondary"> <BIconInfoCircle class="fs-4" /> </span>&nbsp;{{
+                            $t('about.ProjectOrigin')
+                        }}
                     </button>
                 </h2>
-                <div id="collapseOne" class="accordion-collapse collapse show" aria-labelledby="headingOne"
-                    data-bs-parent="#accordionExample">
+                <div
+                    id="collapseOne"
+                    class="accordion-collapse collapse"
+                    aria-labelledby="headingOne"
+                    data-bs-parent="#accordionExample"
+                >
                     <div class="accordion-body">
                         <p class="fw-normal" v-html="$t('about.ProjectOriginBody1')"></p>
                         <p class="fw-normal" v-html="$t('about.ProjectOriginBody2')"></p>
@@ -28,12 +38,7 @@
 
 <script lang="ts">
 import BasePage from '@/components/BasePage.vue';
-import {
-    BIconActivity,
-    BIconBug,
-    BIconChat,
-    BIconInfoCircle
-} from 'bootstrap-icons-vue';
+import { BIconActivity, BIconBug, BIconChat, BIconInfoCircle } from 'bootstrap-icons-vue';
 import { defineComponent } from 'vue';
 
 export default defineComponent({
@@ -45,5 +50,4 @@ export default defineComponent({
         BIconInfoCircle,
     },
 });
-
 </script>

@@ -3,9 +3,13 @@
  * Copyright (C) 2022-2023 Thomas Basler and others
  */
 #include "Configuration.h"
-#include "DS18B20List.h"
 #include "Datastore.h"
 #include "Display_Graphic.h"
+#include "I18n.h"
+#include "Led_Single.h"
+#include "Logger/DS18B20List.h"
+#include "Logger/RamDisk.h"
+#include "Logger/SDCard.h"
 #include "MessageOutput.h"
 #include "MqttHandleDS18B20.h"
 #include "MqttHandleHass.h"
@@ -13,29 +17,40 @@
 #include "NetworkSettings.h"
 #include "NtpSettings.h"
 #include "PinMapping.h"
-#include "SDCard.h"
+#include "RestartHelper.h"
 #include "Scheduler.h"
 #include "Utils.h"
 #include "WebApi.h"
 #include "defaults.h"
 #include <Arduino.h>
 #include <LittleFS.h>
+#include <SpiManager.h>
 #include <TaskScheduler.h>
+#include <esp_heap_caps.h>
 
 void setup()
 {
+    // Move all dynamic allocations >512byte to psram (if available)
+    heap_caps_malloc_extmem_enable(512);
+
+    // Initialize SpiManager
+    SpiManagerInst.register_bus(SPI2_HOST);
+#if SOC_SPI_PERIPH_NUM > 2
+    SpiManagerInst.register_bus(SPI3_HOST);
+#endif
+
+    RamDiskClass::AllocateRamDisk();
+
     // Initialize serial output
     Serial.begin(SERIAL_BAUDRATE);
-#if ARDUINO_USB_CDC_ON_BOOT
-    Serial.setTxTimeoutMs(0);
-    delay(100);
-#else
+#if !ARDUINO_USB_CDC_ON_BOOT
+    // Only wait for serial interface to be set up when not using CDC
     while (!Serial)
         yield();
 #endif
     MessageOutput.init(scheduler);
     MessageOutput.println();
-    MessageOutput.println("Starting OpenDTU");
+    MessageOutput.println("Starting Logger");
 
     // Initialize file system
     MessageOutput.print("Initialize FS... ");
@@ -51,10 +66,9 @@ void setup()
     }
 
     // Read configuration values
+    Configuration.init(scheduler);
     MessageOutput.print("Reading configuration... ");
     if (!Configuration.read()) {
-        MessageOutput.print("initializing... ");
-        Configuration.init();
         if (Configuration.write()) {
             MessageOutput.print("written... ");
         } else {
@@ -66,6 +80,11 @@ void setup()
         Configuration.migrate();
     }
     auto& config = Configuration.get();
+    MessageOutput.println("done");
+
+    // Read languate pack
+    MessageOutput.print("Reading language pack... ");
+    I18n.init(scheduler);
     MessageOutput.println("done");
 
     // Load PinMapping
@@ -101,30 +120,48 @@ void setup()
     WebApi.init(scheduler);
     MessageOutput.println("done");
 
-    // Initialize Display
-    MessageOutput.print("Initialize Display... ");
+    if (static_cast<DisplayType_t>(pin.display_type) != DisplayType_t::None) {
+        // Initialize Display
+        MessageOutput.print("Initialize Display... ");
 
-    Display.init(scheduler, DisplayType_t::SSD1306, 5, 4, -1, 16
-        /*static_cast<DisplayType_t>(pin.display_type),
-        pin.display_data,
-        pin.display_clk,
-        pin.display_cs,
-        pin.display_reset*/
-    );
-    Display.setOrientation(config.Display.Rotation);
-    Display.enablePowerSafe = config.Display.PowerSafe;
-    Display.enableScreensaver = config.Display.ScreenSaver;
-    Display.setContrast(config.Display.Contrast);
-    Display.setLanguage(config.Display.Language);
-    Display.setStartupDisplay();
-    MessageOutput.println("done");
+        Display.init(scheduler,
+            static_cast<DisplayType_t>(pin.display_type),
+            pin.display_data,
+            pin.display_clk,
+            pin.display_cs,
+            pin.display_reset);
+        Display.setDiagramMode(static_cast<DiagramMode_t>(config.Display.Diagram.Mode));
+        Display.setOrientation(config.Display.Rotation);
+        Display.enablePowerSafe = config.Display.PowerSafe;
+        Display.enableScreensaver = config.Display.ScreenSaver;
+        Display.setContrast(config.Display.Contrast);
+        Display.setLocale(config.Display.Locale);
+        Display.setStartupDisplay();
+        MessageOutput.println("done");
+    }
 
-    MessageOutput.print("Initialize temperature logger... ");
+    MessageOutput.print("Initialize DS18B20 ... ");
     DS18B20List.init(scheduler);
-    SDCard.init(scheduler);
     MessageOutput.println("done");
 
-    Datastore.init();
+    if (pin.sd_enabled) {
+        MessageOutput.print("Initialize SD card ... ");
+        pSDCard = new SDCardClass();
+        pSDCard->init(scheduler);
+        Datastore.init(static_cast<IDataStoreDevice*>(pSDCard));
+        MessageOutput.println("done");
+        RamDiskClass::FreeRamDisk();
+    } else {
+        // https://esp32.com/viewtopic.php?t=11767
+        // PSRAM contains data also after reset
+        MessageOutput.print("Initialize Ram disk ... ");
+
+        pRamDisk = new RamDiskClass();
+        Datastore.init(static_cast<IDataStoreDevice*>(pRamDisk));
+        MessageOutput.println("done");
+    }
+
+    RestartHelper.init(scheduler);
 }
 
 void loop()

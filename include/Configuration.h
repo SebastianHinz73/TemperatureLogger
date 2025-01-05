@@ -3,9 +3,12 @@
 
 #include "PinMapping.h"
 #include <cstdint>
+#include <TaskSchedulerDeclarations.h>
+#include <mutex>
+#include <condition_variable>
 
 #define CONFIG_FILENAME "/config.json"
-#define CONFIG_VERSION 0x00011a00 // 0.1.26 // make sure to clean all after change
+#define CONFIG_VERSION 0x00011d00 // 0.1.29 // make sure to clean all after change
 
 #define WIFI_MAX_SSID_STRLEN 32
 #define WIFI_MAX_PASSWORD_STRLEN 64
@@ -16,6 +19,7 @@
 #define NTP_MAX_TIMEZONEDESCR_STRLEN 50
 
 #define MQTT_MAX_HOSTNAME_STRLEN 128
+#define MQTT_MAX_CLIENTID_STRLEN 64
 #define MQTT_MAX_USERNAME_STRLEN 64
 #define MQTT_MAX_PASSWORD_STRLEN 64
 #define MQTT_MAX_TOPIC_STRLEN 32
@@ -26,12 +30,11 @@
 #define TEMPLOGGER_MAX_COUNT 30
 
 #define DEV_MAX_MAPPING_NAME_STRLEN 63
+#define LOCALE_STRLEN 2
 
-#define JSON_BUFFER_SIZE 12288
 
 struct DS18B20SENSOR_CONFIG_T {
     uint16_t Serial;
-    bool Connected;
     char Name[TEMPLOGGER_MAX_SENSORNAME_STRLEN + 1];
 };
 
@@ -71,6 +74,7 @@ struct CONFIG_T {
         bool Enabled;
         char Hostname[MQTT_MAX_HOSTNAME_STRLEN + 1];
         uint32_t Port;
+        char ClientId[MQTT_MAX_CLIENTID_STRLEN + 1];
         char Username[MQTT_MAX_USERNAME_STRLEN + 1];
         char Password[MQTT_MAX_PASSWORD_STRLEN + 1];
         char Topic[MQTT_MAX_TOPIC_STRLEN + 1];
@@ -118,24 +122,47 @@ struct CONFIG_T {
         bool ScreenSaver;
         uint8_t Rotation;
         uint8_t Contrast;
-        uint8_t Language;
-        uint32_t DiagramDuration;
+        char Locale[LOCALE_STRLEN + 1];
+        struct {
+            uint32_t Duration;
+            uint8_t Mode;
+        } Diagram;
     } Display;
+
+    struct {
+        uint8_t Brightness;
+    } Led_Single[PINMAPPING_LED_COUNT];
 
     char Dev_PinMapping[DEV_MAX_MAPPING_NAME_STRLEN + 1];
 };
 
 class ConfigurationClass {
 public:
-    void init();
+    void init(Scheduler& scheduler);
     bool read();
     bool write();
     void migrate();
-    CONFIG_T& get();
+    CONFIG_T const& get();
+
+    class WriteGuard {
+    public:
+        WriteGuard();
+        CONFIG_T& getConfig();
+        ~WriteGuard();
+
+    private:
+        std::unique_lock<std::mutex> _lock;
+    };
+
+    WriteGuard getWriteGuard();
 
     DS18B20SENSOR_CONFIG_T* getFirstDS18B20Config();
     uint32_t getConfiguredSensorCnt();
     bool addSensor(uint16_t serial);
+private:
+    void loop();
+
+    Task _loopTask;
 };
 
 extern ConfigurationClass Configuration;
