@@ -4,6 +4,7 @@
  */
 #include "MqttHandleDtu.h"
 #include "Configuration.h"
+#include "Logger/RamDrive.h"
 #include "MqttSettings.h"
 #include "NetworkSettings.h"
 #include <CpuTemperature.h>
@@ -31,6 +32,12 @@ void MqttHandleDtuClass::loop()
         return;
     }
 
+    char buf[20] = {0};
+    time_t t = pRamDrive->getOldestTime();
+    if(t != 0) {
+        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", localtime(&t));
+    }
+
     MqttSettings.publish("dtu/uptime", String(esp_timer_get_time() / 1000000));
     MqttSettings.publish("dtu/ip", NetworkSettings.localIP().toString());
     MqttSettings.publish("dtu/hostname", NetworkSettings.getHostname());
@@ -38,6 +45,7 @@ void MqttHandleDtuClass::loop()
     MqttSettings.publish("dtu/heap/free", String(ESP.getFreeHeap()));
     MqttSettings.publish("dtu/heap/minfree", String(ESP.getMinFreeHeap()));
     MqttSettings.publish("dtu/heap/maxalloc", String(ESP.getMaxAllocHeap()));
+    MqttSettings.publish("dtu/ramdrive/oldest_entry", String(buf));
     if (NetworkSettings.NetworkMode() == network_mode::WiFi) {
         MqttSettings.publish("dtu/rssi", String(WiFi.RSSI()));
         MqttSettings.publish("dtu/bssid", WiFi.BSSIDstr());

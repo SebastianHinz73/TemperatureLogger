@@ -219,7 +219,7 @@
         "Size": "Größe",
         "Heap": "Heap",
         "PsRam": "PSRAM",
-        "RamDisk": "RamDisk",
+        "RamDrive": "RamDrive",
         "LittleFs": "LittleFs",
         "Sketch": "Sketch"
     },

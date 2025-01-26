@@ -11,19 +11,20 @@
 ////////////////////////
 #define ENTRY_TO_STRING_SIZE 15
 
-class RamDiskClass : public IDataStoreDevice {
+class RamDriveClass : public IDataStoreDevice {
 public:
-    RamDiskClass();
-    ~RamDiskClass()
+    RamDriveClass();
+    ~RamDriveClass()
     {
         delete _ramBuffer;
     }
 
-    static void AllocateRamDisk();
-    static void FreeRamDisk();
+    static void AllocateRamDrive();
+    static void FreeRamDrive();
 
-    size_t getSizeBytes() { return _ramBuffer->getTotalElements() * sizeof(dataEntry_t); }
-    size_t getUsedBytes() { return _ramBuffer->getUsedElements() * sizeof(dataEntry_t); }
+    size_t getSizeBytes() const { return _ramBuffer->getTotalElements() * sizeof(dataEntry_t); }
+    size_t getUsedBytes() const { return _ramBuffer->getUsedElements() * sizeof(dataEntry_t); }
+    time_t getOldestTime() const { return _ramBuffer->getOldestTime(); }
 
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
@@ -38,9 +39,9 @@ private:
     std::mutex _mutex;
 
 private:
-    static uint8_t* _ramDisk;
-    static size_t _ramDiskSize;
+    static uint8_t* _ramDrive;
+    static size_t _ramDriveSize;
     static uint8_t* _cache;
     static size_t _cacheSize;
 };
-extern RamDiskClass* pRamDisk;
+extern RamDriveClass* pRamDrive;

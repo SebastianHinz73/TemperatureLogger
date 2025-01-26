@@ -232,7 +232,7 @@
         "Size": "Taille",
         "Heap": "Heap",
         "PsRam": "PSRAM",
-        "RamDisk": "RamDisk",
+        "RamDrive": "RamDrive",
         "LittleFs": "LittleFs",
         "Sketch": "Sketch"
     },

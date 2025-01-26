@@ -8,11 +8,11 @@
 #include "I18n.h"
 #include "Led_Single.h"
 #include "Logger/DS18B20List.h"
-#include "Logger/RamDisk.h"
+#include "Logger/RamDrive.h"
 #include "Logger/SDCard.h"
 #include "MessageOutput.h"
-#include "MqttHandleDtu.h"
 #include "MqttHandleDS18B20.h"
+#include "MqttHandleDtu.h"
 #include "MqttHandleHass.h"
 #include "MqttSettings.h"
 #include "NetworkSettings.h"
@@ -40,7 +40,7 @@ void setup()
     SpiManagerInst.register_bus(SPI3_HOST);
 #endif
 
-    RamDiskClass::AllocateRamDisk();
+    RamDriveClass::AllocateRamDrive();
 
     // Initialize serial output
     Serial.begin(SERIAL_BAUDRATE);
@@ -152,14 +152,14 @@ void setup()
         pSDCard->init(scheduler);
         Datastore.init(static_cast<IDataStoreDevice*>(pSDCard));
         MessageOutput.println("done");
-        RamDiskClass::FreeRamDisk();
+        RamDriveClass::FreeRamDrive();
     } else {
         // https://esp32.com/viewtopic.php?t=11767
         // PSRAM contains data also after reset
-        MessageOutput.print("Initialize Ram disk ... ");
+        MessageOutput.print("Initialize Ram drive ... ");
 
-        pRamDisk = new RamDiskClass();
-        Datastore.init(static_cast<IDataStoreDevice*>(pRamDisk));
+        pRamDrive = new RamDriveClass();
+        Datastore.init(static_cast<IDataStoreDevice*>(pRamDrive));
         MessageOutput.println("done");
     }
 
