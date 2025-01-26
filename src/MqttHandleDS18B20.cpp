@@ -19,43 +19,26 @@ MqttHandleDS18B20Class::MqttHandleDS18B20Class()
 void MqttHandleDS18B20Class::init(Scheduler& scheduler)
 {
     scheduler.addTask(_loopTask);
+    _loopTask.setInterval(Configuration.get().Mqtt.PublishInterval * TASK_SECOND);
     _loopTask.enable();
 }
 
 void MqttHandleDS18B20Class::loop()
 {
-    if (!MqttSettings.getConnected()) {
-        return;
-    }
+    _loopTask.setInterval(Configuration.get().Mqtt.PublishInterval * TASK_SECOND);
 
-    if (_macAddr.isEmpty()) {
-        uint8_t* bssid = WiFi.BSSID();
-        char mac[13];
-        sprintf(mac, "%02X%02X%02X%02X%02X%02X", bssid[0], bssid[1], bssid[2], bssid[3], bssid[4], bssid[5]);
-        _macAddr = mac;
+    if (!MqttSettings.getConnected()) {
+        _loopTask.forceNextIteration();
+        return;
     }
 
     const CONFIG_T& config = Configuration.get();
 
-    if (millis() - _lastPublish > (config.Mqtt.PublishInterval * 1000)) {
-        MqttSettings.publish("logger/uptime", String(millis() / 1000));
-        MqttSettings.publish("logger/ip", NetworkSettings.localIP().toString());
-        MqttSettings.publish("logger/hostname", NetworkSettings.getHostname());
-        if (NetworkSettings.NetworkMode() == network_mode::WiFi) {
-            MqttSettings.publish("logger/rssi", String(WiFi.RSSI()));
-            MqttSettings.publish("logger/bssid", String(WiFi.BSSIDstr()));
+    for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
+        uint32_t time = 0;
+        float value = 0;
+        if (Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value)) {
+            MqttSettings.publish("ds18b20/" + String(config.DS18B20.Sensors[i].Serial, 16), String(value));
         }
-
-        for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
-            uint32_t time = 0;
-            float value = 0;
-            if(Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value))
-            {
-                MqttSettings.publish(_macAddr + "/" + String(config.DS18B20.Sensors[i].Serial, 16), String(value));
-                MessageOutput.printf("MQTT %s -> %s\r\n", String(config.DS18B20.Sensors[i].Serial, 16).c_str(), String(value).c_str());
-            }
-        }
-
-        _lastPublish = millis();
     }
 }

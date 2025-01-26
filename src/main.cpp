@@ -11,6 +11,7 @@
 #include "Logger/RamDisk.h"
 #include "Logger/SDCard.h"
 #include "MessageOutput.h"
+#include "MqttHandleDtu.h"
 #include "MqttHandleDS18B20.h"
 #include "MqttHandleHass.h"
 #include "MqttSettings.h"
@@ -89,7 +90,7 @@ void setup()
 
     // Load PinMapping
     MessageOutput.print("Reading PinMapping... ");
-    if (PinMapping.init(String(Configuration.get().Dev_PinMapping))) {
+    if (PinMapping.init(Configuration.get().Dev_PinMapping)) {
         MessageOutput.print("found valid mapping ");
     } else {
         MessageOutput.print("using default config ");
@@ -97,7 +98,7 @@ void setup()
     const auto& pin = PinMapping.get();
     MessageOutput.println("done");
 
-    // Initialize WiFi
+    // Initialize Network
     MessageOutput.print("Initialize Network... ");
     NetworkSettings.init(scheduler);
     MessageOutput.println("done");
@@ -111,6 +112,7 @@ void setup()
     // Initialize MqTT
     MessageOutput.print("Initialize MqTT... ");
     MqttSettings.init();
+    MqttHandleDtu.init(scheduler);
     MqttHandleDS18B20.init(scheduler);
     MqttHandleHass.init(scheduler);
     MessageOutput.println("done");

@@ -73,7 +73,7 @@
 #define MQTT_TLSCERTLOGIN false
 #define MQTT_TLSCLIENTCERT ""
 #define MQTT_TLSCLIENTKEY ""
-#define MQTT_LWT_TOPIC "logger/status"
+#define MQTT_LWT_TOPIC "dtu/status"
 #define MQTT_LWT_ONLINE "online"
 #define MQTT_LWT_OFFLINE "offline"
 #define MQTT_LWT_QOS 2U
