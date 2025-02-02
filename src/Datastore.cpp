@@ -61,8 +61,7 @@ bool DatastoreClass::getTemperature(uint16_t serial, uint32_t& time, float& valu
 
     for (const auto& entry : _list) {
         if (entry->Serial() == serial) {
-            entry->getTemperature(time, value);
-            return true;
+            return entry->getTemperature(time, value);
         }
     }
 

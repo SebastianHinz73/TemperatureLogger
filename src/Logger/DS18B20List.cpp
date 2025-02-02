@@ -39,15 +39,18 @@ void DS18B20ListClass::init(Scheduler& scheduler)
 
 void DS18B20ListClass::loop()
 {
-    if (millis() - _lastScan > TIME_SCAN_NEW_SENSORS * 1000) {
+    unsigned long now = millis();
+    if (now - _lastScan > TIME_SCAN_NEW_SENSORS * 1000) {
         scanSensors();
-        _lastScan = millis();
+        _lastScan = now;
     }
 
-    auto config = Configuration.get();
-    if (millis() - _lastTemperatureUpdate > config.DS18B20.PollInterval * 1000) {
+    // only 2 seconds at startup
+    uint32_t interval = now < 15000 ? 2000 : Configuration.get().DS18B20.PollInterval * 1000;
+
+    if (now - _lastTemperatureUpdate > interval) {
         readTemperature();
-        _lastTemperatureUpdate = millis();
+        _lastTemperatureUpdate = now;
     }
 }
 

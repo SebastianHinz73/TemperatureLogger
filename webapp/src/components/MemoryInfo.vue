@@ -23,9 +23,9 @@
                         :used="systemStatus.psram_used"
                     />
                     <FsInfo
-                        :name="$t('memoryinfo.RamDisk')"
-                        :total="systemStatus.ramdisk_total"
-                        :used="systemStatus.ramdisk_used"
+                        :name="$t('memoryinfo.RamDrive')"
+                        :total="systemStatus.ramdrive_total"
+                        :used="systemStatus.ramdrive_used"
                     />
                     <FsInfo
                         :name="$t('memoryinfo.LittleFs')"

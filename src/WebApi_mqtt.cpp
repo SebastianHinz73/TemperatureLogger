@@ -49,6 +49,7 @@ void WebApiMqttClass::onMqttStatus(AsyncWebServerRequest* request)
     root["mqtt_hass_expire"] = config.Mqtt.Hass.Expire;
     root["mqtt_hass_retain"] = config.Mqtt.Hass.Retain;
     root["mqtt_hass_topic"] = config.Mqtt.Hass.Topic;
+    root["mqtt_hass_device_name"] = config.Mqtt.Hass.DeviceName;
     root["mqtt_hass_individualpanels"] = config.Mqtt.Hass.IndividualPanels;
 
     WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
@@ -87,6 +88,7 @@ void WebApiMqttClass::onMqttAdminGet(AsyncWebServerRequest* request)
     root["mqtt_hass_expire"] = config.Mqtt.Hass.Expire;
     root["mqtt_hass_retain"] = config.Mqtt.Hass.Retain;
     root["mqtt_hass_topic"] = config.Mqtt.Hass.Topic;
+    root["mqtt_hass_device_name"] = config.Mqtt.Hass.DeviceName;
     root["mqtt_hass_individualpanels"] = config.Mqtt.Hass.IndividualPanels;
 
     WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
@@ -128,6 +130,7 @@ void WebApiMqttClass::onMqttAdminPost(AsyncWebServerRequest* request)
             && root["mqtt_hass_expire"].is<bool>()
             && root["mqtt_hass_retain"].is<bool>()
             && root["mqtt_hass_topic"].is<String>()
+            && root["mqtt_hass_device_name"].is<String>()
             && root["mqtt_hass_individualpanels"].is<bool>())) {
         retMsg["message"] = "Values are missing!";
         retMsg["code"] = WebApiError::GenericValueMissing;
@@ -267,6 +270,13 @@ void WebApiMqttClass::onMqttAdminPost(AsyncWebServerRequest* request)
                 WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
                 return;
             }
+            if (root["mqtt_hass_device_name"].as<String>().length() > MQTT_MAX_TOPIC_STRLEN) {
+                retMsg["message"] = "Hass device name must not be longer than " STR(MQTT_MAX_TOPIC_STRLEN) " characters!";
+                retMsg["code"] = WebApiError::MqttHassTopicLength;
+                retMsg["param"]["max"] = MQTT_MAX_TOPIC_STRLEN;
+                WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
+                return;
+            }
         }
     }
 
@@ -297,6 +307,12 @@ void WebApiMqttClass::onMqttAdminPost(AsyncWebServerRequest* request)
         config.Mqtt.Hass.Retain = root["mqtt_hass_retain"].as<bool>();
         config.Mqtt.Hass.IndividualPanels = root["mqtt_hass_individualpanels"].as<bool>();
         strlcpy(config.Mqtt.Hass.Topic, root["mqtt_hass_topic"].as<String>().c_str(), sizeof(config.Mqtt.Hass.Topic));
+        strlcpy(config.Mqtt.Hass.DeviceName, root["mqtt_hass_device_name"].as<String>().c_str(), sizeof(config.Mqtt.Hass.DeviceName));
+
+        // Check if base topic was changed
+        if (strcmp(config.Mqtt.Topic, root["mqtt_topic"].as<String>().c_str())) {
+            strlcpy(config.Mqtt.Topic, root["mqtt_topic"].as<String>().c_str(), sizeof(config.Mqtt.Topic));
+        }
     }
 
     WebApi.writeConfig(retMsg);

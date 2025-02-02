@@ -25,7 +25,9 @@ void RamBuffer::PowerOnInitialize()
     _header->last = _header->start;
     _header->end = &_header->start[_elements];
 
-    // PSRAM uses cache which is cleared after reset,
+    _header->first->time = 0;
+
+    // PSRAM uses cache which is cleared after reset -> trigger a flush of the PSRAM-cache to the PSRAM.
     if (_cache != nullptr) {
         memset(_cache, 0, _cacheSize);
     }
@@ -93,7 +95,7 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
     }
 
     if (_cache != nullptr) {
-        // Here _cache is used to read from another PSRAM area and thus trigger a flush of the cache to the PSRAM.
+        // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
         uint32_t sum = 0;
         for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
             sum += ((uint32_t*)_cache)[i];

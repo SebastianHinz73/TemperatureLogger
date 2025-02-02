@@ -219,7 +219,7 @@
         "Size": "Size",
         "Heap": "Heap",
         "PsRam": "PSRAM",
-        "RamDisk": "RamDisk",
+        "RamDrive": "RamDrive",
         "LittleFs": "LittleFs",
         "Sketch": "Sketch"
     },
@@ -495,6 +495,8 @@
         "HassParameters": "Home Assistant MQTT Auto Discovery Parameters",
         "HassPrefixTopic": "Prefix Topic",
         "HassPrefixTopicHint": "The prefix for the discovery topic",
+        "HassPrefixDeviceName": "Device name",
+        "HassPrefixDeviceNameHint": "Device name which is used in HA for the sensors.",
         "HassRetain": "Enable Retain Flag",
         "HassExpire": "Enable Expiration",
         "HassIndividual": "Individual Panels"

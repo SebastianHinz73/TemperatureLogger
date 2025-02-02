@@ -3,34 +3,34 @@
  * Copyright (C) 2024 Sebastian Hinz
  */
 
-#include "Logger/RamDisk.h"
+#include "Logger/RamDrive.h"
 #include "MessageOutput.h"
 #include "PinMapping.h"
 
-RamDiskClass* pRamDisk = nullptr;
+RamDriveClass* pRamDrive = nullptr;
 
-uint8_t* RamDiskClass::_ramDisk = nullptr;
-size_t RamDiskClass::_ramDiskSize = 0;
-uint8_t* RamDiskClass::_cache = nullptr;
-size_t RamDiskClass::_cacheSize = 0;
+uint8_t* RamDriveClass::_ramDrive = nullptr;
+size_t RamDriveClass::_ramDriveSize = 0;
+uint8_t* RamDriveClass::_cache = nullptr;
+size_t RamDriveClass::_cacheSize = 0;
 
-RamDiskClass::RamDiskClass()
+RamDriveClass::RamDriveClass()
 {
-    _ramBuffer = new RamBuffer(_ramDisk, _ramDiskSize, _cache, _cacheSize);
+    _ramBuffer = new RamBuffer(_ramDrive, _ramDriveSize, _cache, _cacheSize);
     if (!_ramBuffer->IntegrityCheck()) {
-        MessageOutput.printf("Initialize empty RamDisk with %d entries. ", _ramBuffer->getTotalElements());
+        MessageOutput.printf("Initialize empty RamDrive with %d entries. ", _ramBuffer->getTotalElements());
         _ramBuffer->PowerOnInitialize();
     } else {
-        MessageOutput.printf("Initialize RamDisk. %d entries found. %.2f percent used. ", _ramBuffer->getUsedElements(), _ramBuffer->getUsedElements() * 100.0f / _ramBuffer->getTotalElements());
+        MessageOutput.printf("Initialize RamDrive. %d entries found. %.2f percent used. ", _ramBuffer->getUsedElements(), _ramBuffer->getUsedElements() * 100.0f / _ramBuffer->getTotalElements());
     }
 }
 
-void RamDiskClass::AllocateRamDisk()
+void RamDriveClass::AllocateRamDrive()
 {
     if (ESP.getPsramSize() > 0) // PSRAM available
     {
-        _ramDiskSize = ESP.getPsramSize() * 0.8f;
-        _ramDisk = new uint8_t[_ramDiskSize];
+        _ramDriveSize = ESP.getPsramSize() * 0.8f;
+        _ramDrive = new uint8_t[_ramDriveSize];
 
         uint32_t dummySize = ESP.getPsramSize() * 0.1f;
         auto dummy = new uint8_t[dummySize];
@@ -41,18 +41,18 @@ void RamDiskClass::AllocateRamDisk()
         delete[] dummy;
     } else // use normal RAM
     {
-        _ramDiskSize = 4096;
-        _ramDisk = new uint8_t[_ramDiskSize];
+        _ramDriveSize = 4096;
+        _ramDrive = new uint8_t[_ramDriveSize];
         _cacheSize = 0;
         _cache = nullptr;
     }
 }
 
-void RamDiskClass::FreeRamDisk()
+void RamDriveClass::FreeRamDrive()
 {
-    if (_ramDisk != nullptr) {
-        delete[] _ramDisk;
-        _ramDisk = nullptr;
+    if (_ramDrive != nullptr) {
+        delete[] _ramDrive;
+        _ramDrive = nullptr;
     }
     if (_cache != nullptr) {
         delete[] _cache;
@@ -60,13 +60,13 @@ void RamDiskClass::FreeRamDisk()
     }
 }
 
-void RamDiskClass::writeValue(uint16_t serial, time_t time, float value)
+void RamDriveClass::writeValue(uint16_t serial, time_t time, float value)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     _ramBuffer->writeValue(serial, time, value);
 }
 
-bool RamDiskClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
+bool RamDriveClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     size = 0;
@@ -74,7 +74,7 @@ bool RamDiskClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size
     return true;
 }
 
-bool RamDiskClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
+bool RamDriveClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
 {
     _mutex.lock();
 
@@ -86,7 +86,7 @@ bool RamDiskClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& 
         size_t ret = 0;
         size_t maxCnt = maxLen / ENTRY_TO_STRING_SIZE;
 
-        // MessageOutput.printf("RamDiskClass::getFile responseFiller maxLen:%d, alreadySent:%d, fileSize:%d, maxCnt:%d\r\n", maxLen, alreadySent, fileSize, maxCnt);
+        // MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d, fileSize:%d, maxCnt:%d\r\n", maxLen, alreadySent, fileSize, maxCnt);
         for (size_t cnt = 0; cnt < maxCnt; cnt++) {
             if (!_ramBuffer->getEntry(serial, start_of_day, act)) {
                 break;
@@ -109,7 +109,7 @@ bool RamDiskClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& 
     return true;
 }
 
-time_t RamDiskClass::getStartOfDay(const tm& timeinfo)
+time_t RamDriveClass::getStartOfDay(const tm& timeinfo)
 {
     tm info;
     memcpy(&info, &timeinfo, sizeof(tm));

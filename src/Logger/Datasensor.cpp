@@ -50,8 +50,9 @@ void Datasensor::addValue(IDataStoreDevice* device, float value)
     }
 }
 
-void Datasensor::getTemperature(uint32_t& time, float& value)
+bool Datasensor::getTemperature(uint32_t& time, float& value)
 {
     time = _timeValid ? _lastTime : 0;
     value = _value;
+    return _value != std::numeric_limits<float>::min();
 }

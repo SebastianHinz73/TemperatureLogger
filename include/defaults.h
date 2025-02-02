@@ -73,7 +73,6 @@
 #define MQTT_TLSCERTLOGIN false
 #define MQTT_TLSCLIENTCERT ""
 #define MQTT_TLSCLIENTKEY ""
-#define MQTT_LWT_TOPIC "logger/status"
 #define MQTT_LWT_ONLINE "online"
 #define MQTT_LWT_OFFLINE "offline"
 #define MQTT_LWT_QOS 2U
@@ -87,6 +86,7 @@
 #define MQTT_HASS_EXPIRE true
 #define MQTT_HASS_RETAIN true
 #define MQTT_HASS_TOPIC "homeassistant/"
+#define MQTT_HASS_DEVICENAME "LoggerDevice"
 #define MQTT_HASS_INDIVIDUALPANELS false
 
 #define DEV_PINMAPPING ""

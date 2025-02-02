@@ -104,6 +104,7 @@ bool ConfigurationClass::write()
     mqtt_hass["enabled"] = config.Mqtt.Hass.Enabled;
     mqtt_hass["retain"] = config.Mqtt.Hass.Retain;
     mqtt_hass["topic"] = config.Mqtt.Hass.Topic;
+    mqtt_hass["device_name"] = config.Mqtt.Hass.DeviceName;
     mqtt_hass["individual_panels"] = config.Mqtt.Hass.IndividualPanels;
     mqtt_hass["expire"] = config.Mqtt.Hass.Expire;
 
@@ -242,7 +243,9 @@ bool ConfigurationClass::read()
         strlcpy(config.DS18B20.Sensors[i].Name, sensor["name"] | "undefined", sizeof(config.DS18B20.Sensors[i].Name));
     }
     JsonObject mqtt_lwt = mqtt["lwt"];
-    strlcpy(config.Mqtt.Lwt.Topic, mqtt_lwt["topic"] | MQTT_LWT_TOPIC, sizeof(config.Mqtt.Lwt.Topic));
+
+    String MQTT_LWT_TOPIC = String(Utils::getChipId()) + "/status";
+    strlcpy(config.Mqtt.Lwt.Topic, MQTT_LWT_TOPIC.c_str(), sizeof(config.Mqtt.Lwt.Topic));
     strlcpy(config.Mqtt.Lwt.Value_Online, mqtt_lwt["value_online"] | MQTT_LWT_ONLINE, sizeof(config.Mqtt.Lwt.Value_Online));
     strlcpy(config.Mqtt.Lwt.Value_Offline, mqtt_lwt["value_offline"] | MQTT_LWT_OFFLINE, sizeof(config.Mqtt.Lwt.Value_Offline));
     config.Mqtt.Lwt.Qos = mqtt_lwt["qos"] | MQTT_LWT_QOS;
@@ -260,6 +263,7 @@ bool ConfigurationClass::read()
     config.Mqtt.Hass.Expire = mqtt_hass["expire"] | MQTT_HASS_EXPIRE;
     config.Mqtt.Hass.IndividualPanels = mqtt_hass["individual_panels"] | MQTT_HASS_INDIVIDUALPANELS;
     strlcpy(config.Mqtt.Hass.Topic, mqtt_hass["topic"] | MQTT_HASS_TOPIC, sizeof(config.Mqtt.Hass.Topic));
+    strlcpy(config.Mqtt.Hass.DeviceName, mqtt_hass["device_name"] | MQTT_HASS_DEVICENAME, sizeof(config.Mqtt.Hass.DeviceName));
 
     JsonObject security = doc["security"];
     strlcpy(config.Security.Password, security["password"] | ACCESS_POINT_PASSWORD, sizeof(config.Security.Password));
