@@ -146,6 +146,7 @@
                     maxlength="32"
                     :prefix="mqttConfigList.mqtt_topic"
                     :placeholder="$t('mqttadmin.LwtTopicHint')"
+                    disabled
                 />
 
                 <InputElement
@@ -184,12 +185,20 @@
                 add-space
                 v-if="mqttConfigList.mqtt_enabled && mqttConfigList.mqtt_hass_enabled"
             >
-                <InputElement
+            <InputElement
                     :label="$t('mqttadmin.HassPrefixTopic')"
                     v-model="mqttConfigList.mqtt_hass_topic"
                     type="text"
                     maxlength="32"
                     :placeholder="$t('mqttadmin.HassPrefixTopicHint')"
+                />
+
+                <InputElement
+                    :label="$t('mqttadmin.HassPrefixDeviceName')"
+                    v-model="mqttConfigList.mqtt_hass_device_name"
+                    type="text"
+                    maxlength="32"
+                    :placeholder="$t('mqttadmin.HassPrefixDeviceNameHint')"
                 />
 
                 <InputElement
@@ -201,12 +210,6 @@
                 <InputElement
                     :label="$t('mqttadmin.HassExpire')"
                     v-model="mqttConfigList.mqtt_hass_expire"
-                    type="checkbox"
-                />
-
-                <InputElement
-                    :label="$t('mqttadmin.HassIndividual')"
-                    v-model="mqttConfigList.mqtt_hass_individualpanels"
                     type="checkbox"
                 />
             </CardElement>

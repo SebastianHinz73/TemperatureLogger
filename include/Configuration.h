@@ -93,6 +93,7 @@ struct CONFIG_T {
             bool Enabled;
             bool Retain;
             char Topic[MQTT_MAX_TOPIC_STRLEN + 1];
+            char DeviceName[MQTT_MAX_TOPIC_STRLEN + 1];
             bool IndividualPanels;
             bool Expire;
         } Hass;

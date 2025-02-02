@@ -12,7 +12,7 @@ public:
         return _serial;
     }
     void addValue(IDataStoreDevice* device, float value);
-    void getTemperature(uint32_t& time, float& value);
+    bool getTemperature(uint32_t& time, float& value);
     bool valueChanged() { return _actValueChanged; }
 
 private:

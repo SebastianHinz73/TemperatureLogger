@@ -59,15 +59,15 @@ void MqttHandleHassClass::publishConfig()
     const CONFIG_T& config = Configuration.get();
 
     // publish DTU sensors
-    publishDtuSensor("IP", "dtu/ip", "", "mdi:network-outline", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
-    publishDtuSensor("WiFi Signal", "dtu/rssi", "dBm", "", DEVICE_CLS_SIGNAL_STRENGTH, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
-    publishDtuSensor("Uptime", "dtu/uptime", "s", "", DEVICE_CLS_DURATION, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
-    publishDtuSensor("Temperature", "dtu/temperature", "°C", "", DEVICE_CLS_TEMPERATURE, STATE_CLS_MEASUREMENT, CATEGORY_DIAGNOSTIC);
-    publishDtuSensor("Heap Size", "dtu/heap/size", "Bytes", "mdi:memory", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
-    publishDtuSensor("Heap Free", "dtu/heap/free", "Bytes", "mdi:memory", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
-    publishDtuSensor("Largest Free Heap Block", "dtu/heap/maxalloc", "Bytes", "mdi:memory", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
-    publishDtuSensor("Lifetime Minimum Free Heap", "dtu/heap/minfree", "Bytes", "mdi:memory", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
-    publishDtuSensor("Ramdrive oldest entry", "dtu/ramdrive/oldest_entry", "", "mdi:calendar-clock", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("IP", "ip", "", "mdi:network-outline", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("WiFi Signal", "rssi", "dBm", "", DEVICE_CLS_SIGNAL_STRENGTH, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("Uptime", "uptime", "s", "", DEVICE_CLS_DURATION, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("Temperature", "temperature", "°C", "", DEVICE_CLS_TEMPERATURE, STATE_CLS_MEASUREMENT, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("Heap Size", "heap/size", "Bytes", "mdi:memory", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("Heap Free", "heap/free", "Bytes", "mdi:memory", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("Largest Free Heap Block", "heap/maxalloc", "Bytes", "mdi:memory", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("Lifetime Minimum Free Heap", "heap/minfree", "Bytes", "mdi:memory", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
+    publishDtuSensor("Ramdrive oldest entry", "ramdrive/oldest_entry", "", "mdi:calendar-clock", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
 
     for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
         publishDS18B20Sensor(config.DS18B20.Sensors[i].Name, String(config.DS18B20.Sensors[i].Serial, 16), config.DS18B20.Fahrenheit ? "°F" : "°C", "", DEVICE_CLS_TEMPERATURE, STATE_CLS_MEASUREMENT, CATEGORY_NONE);
@@ -84,6 +84,22 @@ void MqttHandleHassClass::createDtuInfo(JsonDocument& root)
         "Logger",
         "Logger",
         __COMPILED_GIT_HASH__);
+}
+
+void MqttHandleHassClass::createLoggerInfo(JsonDocument& root)
+{
+    const CONFIG_T& config = Configuration.get();
+    const String ids = config.Mqtt.Hass.DeviceName;
+
+    createDeviceInfo(
+        root,
+        ids,
+        ids,
+        getDtuUrl(),
+        "Logger",
+        "Logger",
+        __COMPILED_GIT_HASH__,
+        getDtuUniqueId());
 }
 
 void MqttHandleHassClass::createDeviceInfo(
@@ -190,10 +206,11 @@ void MqttHandleHassClass::publishDtuSensor(
     const DeviceClassType device_class, const StateClassType state_class, const CategoryType category)
 {
     const String dtuId = getDtuUniqueId();
+    String dtu_state_topic = String(Utils::getChipId()) + "/" + state_topic;
 
     JsonDocument root;
     createDtuInfo(root);
-    publishSensor(root, dtuId, dtuId, name, state_topic, unit_of_measure, icon, device_class, state_class, category);
+    publishSensor(root, dtuId, dtuId, name, dtu_state_topic, unit_of_measure, icon, device_class, state_class, category);
 }
 
 void MqttHandleHassClass::publishDS18B20Sensor(
@@ -204,7 +221,7 @@ void MqttHandleHassClass::publishDS18B20Sensor(
     const String dtuId = getDtuUniqueId();
 
     JsonDocument root;
-    createDtuInfo(root);
+    createLoggerInfo(root);
 
     if (Configuration.get().Mqtt.Hass.Expire) {
         root["exp_aft"] = Configuration.get().Mqtt.PublishInterval * 2;

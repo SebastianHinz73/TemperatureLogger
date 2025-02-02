@@ -56,6 +56,7 @@ private:
     static void publishDS18B20Sensor(const String& name, const String& serial, const String& unit_of_measure, const String& icon, const DeviceClassType device_class, const StateClassType state_class, const CategoryType category);
 
     static void createDtuInfo(JsonDocument& doc);
+    static void createLoggerInfo(JsonDocument& root);
 
     static void createDeviceInfo(JsonDocument& doc, const String& name, const String& identifiers, const String& configuration_url, const String& manufacturer, const String& model, const String& sw_version, const String& via_device = "");
 

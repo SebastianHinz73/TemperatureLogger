@@ -488,6 +488,8 @@
         "HassParameters": "Paramètres de découverte automatique MQTT de Home Assistant",
         "HassPrefixTopic": "Préfixe du sujet",
         "HassPrefixTopicHint": "Le préfixe de découverte du sujet",
+        "HassPrefixDeviceName": "Nom de l'appareil",
+        "HassPrefixDeviceNameHint": "Nom du dispositif utilisé pour les capteurs.",
         "HassRetain": "Activer du maintien",
         "HassExpire": "Activer l'expiration",
         "HassIndividual": "Panneaux individuels"
