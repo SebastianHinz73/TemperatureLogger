@@ -27,6 +27,7 @@ public:
     virtual void writeValue(uint16_t serial, time_t time, float value);
     virtual bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
     virtual bool getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
+    virtual bool backupAll(ResponseFiller& responseFiller);
 
 private:
     void loop();

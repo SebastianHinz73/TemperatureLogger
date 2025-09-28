@@ -109,6 +109,42 @@ bool RamDriveClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller&
     return true;
 }
 
+bool RamDriveClass::backupAll(ResponseFiller& responseFiller)
+{
+    _mutex.lock();
+
+    static dataEntry_t* act;
+    act = nullptr;
+
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize) -> size_t {
+        size_t ret = 0;
+        size_t maxCnt = maxLen / ENTRY_TO_CSV_SIZE;
+
+        // MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d, fileSize:%d, maxCnt:%d\r\n", maxLen, alreadySent, fileSize, maxCnt);
+        for (size_t cnt = 0; cnt < maxCnt; cnt++) {
+            if (!_ramBuffer->getEntry(act)) {
+                break;
+            }
+
+            // int h = (act->time - start_of_day) / 3600;
+            // int min = ((act->time - start_of_day) - h * 3600) / 60;
+            // int sec = (act->time - start_of_day) - h * 3600 - min * 60;
+            // snprintf((char*)&buffer[cnt * ENTRY_TO_CSV_SIZE], ENTRY_TO_CSV_SIZE, "%02d:%02d:%02d;%05.2f\n", h, min, sec, act->value);
+            snprintf((char*)&buffer[cnt * ENTRY_TO_CSV_SIZE], ENTRY_TO_CSV_SIZE, "0123456789abcde\n");
+
+            buffer[(cnt + 1) * ENTRY_TO_CSV_SIZE - 1] = '\n';
+            ret += ENTRY_TO_CSV_SIZE;
+        }
+
+        if (ret == 0) {
+            _mutex.unlock();
+        }
+        return ret;
+    };
+
+    return true;
+}
+
 time_t RamDriveClass::getStartOfDay(const tm& timeinfo)
 {
     tm info;

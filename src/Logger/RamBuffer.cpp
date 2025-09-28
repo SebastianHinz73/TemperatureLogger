@@ -135,3 +135,29 @@ bool RamBuffer::getEntry(uint16_t serial, time_t time, dataEntry_t*& act)
     }
     return false;
 }
+
+bool RamBuffer::getEntry(dataEntry_t*& act)
+{
+    // start with _header->first, then increment
+    if (act == nullptr) {
+        act = _header->first;
+    } else if (act == _header->last) {
+        return false;
+    } else {
+        act++;
+    }
+
+    for (int i = 0; i < 2; i++) {
+        while (act < _header->end) {
+
+            // end check
+            if (act == _header->last) {
+                return false;
+            }
+
+            return true;
+        }
+        act = _header->start; // start again with _header->start
+    }
+    return false;
+}

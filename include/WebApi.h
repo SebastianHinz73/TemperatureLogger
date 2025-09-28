@@ -14,6 +14,7 @@
 #include "WebApi_network.h"
 #include "WebApi_ntp.h"
 #include "WebApi_power.h"
+#include "WebApi_ramdrive.h"
 #include "WebApi_security.h"
 #include "WebApi_sysstatus.h"
 #include "WebApi_templogger.h"
@@ -48,6 +49,7 @@ private:
     WebApiDevInfoClass _webApiDevInfo;
     WebApiEventlogClass _webApiEventlog;
     WebApiFileClass _webApiFile;
+    WebApiRamDriveClass _webApiRamDrive;
     WebApiFirmwareClass _webApiFirmware;
     WebApiI18nClass _webApiI18n;
     WebApiMaintenanceClass _webApiMaintenance;

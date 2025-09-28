@@ -28,6 +28,8 @@ public:
     bool getTemperatureFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
     bool valueChanged(uint16_t serial);
 
+    bool backupAll(ResponseFiller& responseFiller);
+
 private:
     std::mutex _mutex;
     IDataStoreDevice* _device;

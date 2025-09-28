@@ -32,6 +32,7 @@ public:
 
     void writeValue(uint16_t serial, time_t time, float value);
     bool getEntry(uint16_t serial, time_t time, dataEntry_t*& act);
+    bool getEntry(dataEntry_t*& act);
 
     time_t getOldestTime() const { return _header->first->time; }
 

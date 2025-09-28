@@ -110,3 +110,12 @@ bool DatastoreClass::getTemperatureFile(uint16_t serial, const tm& timeinfo, Res
 
     return _device->getFile(serial, timeinfo, responseFiller);
 }
+
+bool DatastoreClass::backupAll(ResponseFiller& responseFiller)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (_device == nullptr)
+        return false;
+
+    return _device->backupAll(responseFiller);
+}

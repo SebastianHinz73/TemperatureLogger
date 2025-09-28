@@ -10,6 +10,7 @@
 
 ////////////////////////
 #define ENTRY_TO_STRING_SIZE 15
+#define ENTRY_TO_CSV_SIZE 15
 
 class RamDriveClass : public IDataStoreDevice {
 public:
@@ -30,6 +31,7 @@ public:
     virtual void writeValue(uint16_t serial, time_t time, float value);
     virtual bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
     virtual bool getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
+    virtual bool backupAll(ResponseFiller& responseFiller);
 
 private:
     time_t getStartOfDay(const tm& timeinfo);

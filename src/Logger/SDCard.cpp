@@ -134,6 +134,11 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& r
     return true;
 }
 
+bool SDCardClass::backupAll(ResponseFiller& responseFiller)
+{
+    return false;
+}
+
 bool SDCardClass::openFile(uint16_t serial, const tm timeinfo, const char* mode, File& file)
 {
     char buffer[50];
