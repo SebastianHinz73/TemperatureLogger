@@ -1,6 +1,6 @@
 <template>
     <div class="row row-cols-1 row-cols-md-3 g-3">
-        <div v-for="sensor in  sensorData ">
+        <div v-for="sensor in  sensorData" :key="sensor.serial">
             <div class="card">
                 <div class="card-header" :class="{ 'text-bg-success': sensor.valid, 'text-bg-danger': !sensor.valid }">{{
                     sensor.name

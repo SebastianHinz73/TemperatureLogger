@@ -28,7 +28,7 @@ export default defineComponent({
     },
     data() {
         return {
-            isLogged: this.isLoggedIn(),
+            isLogged: isLoggedIn(),
 
             socket: {} as WebSocket,
             heartInterval: 0,
