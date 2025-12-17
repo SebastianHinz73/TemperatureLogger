@@ -27,6 +27,7 @@ void WebApiWsLiveClass::init(AsyncWebServer& server, Scheduler& scheduler)
     using std::placeholders::_6;
 
     server.on("/api/livedata/status", HTTP_GET, std::bind(&WebApiWsLiveClass::onLivedataStatus, this, _1));
+    server.on("/api/livedata/graph", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphUpdate, this, _1));
 
     server.addHandler(&_ws);
     _ws.onEvent(std::bind(&WebApiWsLiveClass::onWebsocketEvent, this, _1, _2, _3, _4, _5, _6));
@@ -78,13 +79,15 @@ void WebApiWsLiveClass::sendDataTaskCb()
         if (!Datastore.validSensor(config.DS18B20.Sensors[i].Serial)) {
             continue;
         }
-        bValueChanged |= Datastore.valueChanged(config.DS18B20.Sensors[i].Serial);
+        bValueChanged |= Datastore.valueChanged(config.DS18B20.Sensors[i].Serial, 5);
     }
+    bool bForce = millis() - _lastPublishStats > (5/*60*/ * 1000);
 
     // Update at least after 60 seconds
-    if (!(bValueChanged || millis() - _lastPublishStats > (60 * 1000))) {
+    if (!(bValueChanged || bForce)) {
         return;
     }
+    //MessageOutput.printf("bValueChanged %d , %d\r\n", bValueChanged, millis() - _lastPublishStats);
 
     _lastPublishStats = millis();
 
@@ -93,10 +96,25 @@ void WebApiWsLiveClass::sendDataTaskCb()
         JsonDocument root;
         JsonVariant var = root;
 
-        generateJsonResponse(var);
+        generateJsonResponse(var); // obsolete, TODO: remove
 
-        if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
-            return;
+
+        const CONFIG_T& config = Configuration.get();
+        auto tempArray = root["updates"].to<JsonObject>();
+
+        for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+            if (config.DS18B20.Sensors[i].Serial == 0) {
+                continue;
+            }
+            uint32_t time;
+            float value;
+            bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
+            if(!valid) {
+                continue;
+            }
+
+            String serial = String(config.DS18B20.Sensors[i].Serial, 16);
+            tempArray[serial] = value;
         }
 
         String buffer;
@@ -160,6 +178,7 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
         auto& root = response->getRoot();
 
         generateJsonResponse(root);
+        generateGraphDataResponse(true, root);
 
         WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 
@@ -168,6 +187,109 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
         WebApi.sendTooManyRequests(request);
     } catch (const std::exception& exc) {
         MessageOutput.printf("Unknown exception in /api/livedata/status. Reason: \"%s\".\r\n", exc.what());
+        WebApi.sendTooManyRequests(request);
+    }
+}
+
+void WebApiWsLiveClass::generateGraphConfigResponse(JsonVariant& root)
+{
+    const CONFIG_T& config = Configuration.get();
+    auto tempArray = root["config"].to<JsonObject>();
+
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        if (config.DS18B20.Sensors[i].Serial == 0) {
+            continue;
+        }
+        uint32_t time;
+        float value;
+        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
+        if(!valid) {
+            continue;
+        }
+
+        const char* colors[] = { "#ff0000", "#c8c8c8","#646464", "#0000FF", "#c8c8c8", "#646464" , "#00FF00", "#00aa00"};
+
+
+        //JsonObject tempObj = tempArray[i].to<JsonObject>();
+        //tempObj["name"] = config.DS18B20.Sensors[i].Name;
+        //tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
+        //tempObj["color"] = colors[i % (sizeof(colors) / sizeof(colors[0]))];
+
+        String serial = String(config.DS18B20.Sensors[i].Serial, 16);
+        tempArray[serial]["name"] = config.DS18B20.Sensors[i].Name;
+        tempArray[serial]["color"] = colors[i % (sizeof(colors) / sizeof(colors[0]))];
+    }
+}
+
+void WebApiWsLiveClass::generateGraphDataResponse(bool update, JsonVariant& root)
+{
+    const CONFIG_T& config = Configuration.get();
+    auto tempArray = root[update ? "updates" : "data"].to<JsonObject>();
+
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        if (config.DS18B20.Sensors[i].Serial == 0) {
+            continue;
+        }
+        uint32_t time;
+        float value;
+        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
+        if(!valid) {
+            continue;
+        }
+
+        String serial = String(config.DS18B20.Sensors[i].Serial, 16);
+
+        if (update) {
+            tempArray[serial] = "[ {\"x\": " + String(time) + ",\"y\": " + String(value) + "} ]";
+        }
+        else {
+            tempArray[serial] = "[]";
+        }
+    }
+}
+
+void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
+{
+    if (!WebApi.checkCredentialsReadonly(request)) {
+        return;
+    }
+
+    try {
+        std::lock_guard<std::mutex> lock(_mutex);
+
+        AsyncJsonResponse* response = new AsyncJsonResponse();
+        auto& root = response->getRoot();
+
+        //const CONFIG_T& config = Configuration.get();
+
+        if (!request->hasParam("dataonly")) {
+            generateGraphConfigResponse(root);
+        }
+
+        generateGraphDataResponse(false, root);
+
+        /*
+        long long timestamp = 0;
+        uint32_t interval = 2 * TASK_SECOND;
+
+        if (request->hasParam("timestamp")) {
+            String s = request->getParam("timestamp")->value();
+
+            timestamp = strtoll(s.c_str(), NULL, 10);
+            if (timestamp == 0) {
+                interval = 60 * TASK_SECOND;
+            }
+        }
+*/
+        //root["timestamp"] = timestamp + interval;
+        //root["interval"] = interval;
+
+        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
+    } catch (const std::bad_alloc& bad_alloc) {
+        MessageOutput.printf("Call to /api/livedata/graph temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
+        WebApi.sendTooManyRequests(request);
+    } catch (const std::exception& exc) {
+        MessageOutput.printf("Unknown exception in /api/livedata/graph. Reason: \"%s\".\r\n", exc.what());
         WebApi.sendTooManyRequests(request);
     }
 }

@@ -13,7 +13,7 @@ public:
     }
     void addValue(IDataStoreDevice* device, float value);
     bool getTemperature(uint32_t& time, float& value);
-    bool valueChanged() { return _actValueChanged; }
+    bool valueChanged(uint32_t seconds);
 
 private:
     uint16_t _serial;
@@ -23,5 +23,8 @@ private:
 
     time_t _firstTime;
     time_t _lastTime;
+    time_t _oldLastTime;
     float _value;
+    float _oldValue;
+
 };

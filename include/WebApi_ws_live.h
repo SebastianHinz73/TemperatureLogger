@@ -14,14 +14,17 @@ public:
 
 private:
     void generateJsonResponse(JsonVariant& root);
+    void generateGraphConfigResponse(JsonVariant& root);
+    void generateGraphDataResponse(bool update,JsonVariant& root);
 
     void onLivedataStatus(AsyncWebServerRequest* request);
+    void onGraphUpdate(AsyncWebServerRequest* request);
     void onWebsocketEvent(AsyncWebSocket* server, AsyncWebSocketClient* client, AwsEventType type, void* arg, uint8_t* data, size_t len);
 
     AsyncWebSocket _ws;
     AuthenticationMiddleware _simpleDigestAuth;
 
-    uint32_t _lastPublishStats = 0;
+    unsigned long _lastPublishStats = 0;
     std::mutex _mutex;
 
     Task _wsCleanupTask;

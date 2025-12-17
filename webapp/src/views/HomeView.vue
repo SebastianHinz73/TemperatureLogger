@@ -9,11 +9,13 @@
     >
         <HintView :hints="liveData.hints" />
         <SensorInfo :sensorData="liveData.temperatures" /><br />
+        <TempChart :updates="liveData.updates"/><br />
     </BasePage>
 </template>
 
 <script lang="ts">
 import BasePage from '@/components/BasePage.vue';
+import TempChart from '@/components/TempChart.vue';
 import HintView from '@/components/HintView.vue';
 import SensorInfo from '@/components/SensorInfo.vue';
 import type { Temperature, LiveData } from '@/types/LiveDataStatus';
@@ -24,6 +26,7 @@ export default defineComponent({
     components: {
         BasePage,
         HintView,
+        TempChart,
         SensorInfo,
     },
     data() {
@@ -55,7 +58,7 @@ export default defineComponent({
         this.closeSocket();
     },
     updated() {
-        console.log('Updated');
+       //console.log('Updated');
     },
     computed: {
         sensorData(): Temperature[] {
@@ -95,11 +98,12 @@ export default defineComponent({
             this.socket = new WebSocket(webSocketUrl);
 
             this.socket.onmessage = (event) => {
-                console.log(event);
+                //console.log(event);
                 if (event.data != '{}') {
                     const newData = JSON.parse(event.data);
 
                     Object.assign(this.liveData.temperatures, newData.temperatures);
+                    Object.assign(this.liveData.updates, newData.updates);
                     Object.assign(this.liveData.hints, newData.hints);
 
                     this.dataLoading = false;

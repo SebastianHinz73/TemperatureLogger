@@ -16,10 +16,12 @@
     "@popperjs/core": "^2.11.8",
     "bootstrap": "^5.3.8",
     "bootstrap-icons-vue": "^1.11.3",
+    "chart.js": "^4.4.7",
     "mitt": "^3.0.1",
     "sortablejs": "^1.15.6",
     "spark-md5": "^3.0.2",
     "vue": "^3.5.20",
+    "vue-chartjs": "^5.3.2",
     "vue-i18n": "11.1.11",
     "vue-router": "^4.5.1"
   },

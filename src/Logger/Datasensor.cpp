@@ -8,11 +8,15 @@
 
 Datasensor::Datasensor(uint16_t serial, uint8_t mDay)
     : _serial(serial)
+    , _timeValid(false)
+    , _actValueChanged(false)
     , _mDay(mDay)
+    , _firstTime(0)
+    , _lastTime(0)
+    , _oldLastTime(0)
+    , _value(std::numeric_limits<float>::min())
+    , _oldValue(std::numeric_limits<float>::min())
 {
-    _firstTime = 0;
-    _lastTime = 0;
-    _value = std::numeric_limits<float>::min();
 }
 
 void Datasensor::addValue(IDataStoreDevice* device, float value)
@@ -43,9 +47,12 @@ void Datasensor::addValue(IDataStoreDevice* device, float value)
         device->writeValue(_serial, now, value);
 
         _firstTime = now;
+        _oldLastTime = _lastTime;
         _lastTime = now;
+        _oldValue = _value;
         _value = value;
     } else {
+        _oldLastTime = _lastTime;
         _lastTime = now;
     }
 }
@@ -55,4 +62,15 @@ bool Datasensor::getTemperature(uint32_t& time, float& value)
     time = _timeValid ? _lastTime : 0;
     value = _value;
     return _value != std::numeric_limits<float>::min();
+}
+
+bool Datasensor::valueChanged(uint32_t seconds)
+{
+    if(!_timeValid) {
+        return true;
+    }
+    if(_value != _oldValue && _lastTime - _oldLastTime > seconds) {
+        return true;
+    }
+    return false;
 }

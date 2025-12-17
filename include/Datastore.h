@@ -26,7 +26,7 @@ public:
     bool getTemperature(uint16_t serial, uint32_t& time, float& value);
     bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
     bool getTemperatureFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
-    bool valueChanged(uint16_t serial);
+    bool valueChanged(uint16_t serial, uint32_t seconds);
 
 private:
     std::mutex _mutex;

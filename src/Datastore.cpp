@@ -68,13 +68,13 @@ bool DatastoreClass::getTemperature(uint16_t serial, uint32_t& time, float& valu
     return false;
 }
 
-bool DatastoreClass::valueChanged(uint16_t serial)
+bool DatastoreClass::valueChanged(uint16_t serial, uint32_t seconds)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
     for (const auto& entry : _list) {
         if (entry->Serial() == serial) {
-            return entry->valueChanged();
+            return entry->valueChanged(seconds);
         }
     }
     return false;
