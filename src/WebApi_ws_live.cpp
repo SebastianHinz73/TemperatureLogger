@@ -245,6 +245,10 @@ void WebApiWsLiveClass::generateGraphDataResponse(bool update, JsonVariant& root
         else {
             tempArray[serial] = "[]";
         }
+        static int x = 10;
+        static int y = 20;
+        tempArray[serial] = "[{\"x\":" + String(x++) + ",\"y\":" + String(y++) + "}, {\"x\": " + String(x++) + ",\"y\": " + String(y++) + "}]";
+
     }
 }
 

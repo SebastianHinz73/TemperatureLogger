@@ -1,4 +1,4 @@
-import type { UpdatePoint } from '@/types/LiveDataGraph';
+import type { UpdateMap } from '@/types/LiveDataGraph';
 
 export interface Temperature {
     serial: number;
@@ -16,6 +16,6 @@ export interface Hints {
 
 export interface LiveData {
     temperatures: Temperature[];
-    updates: UpdatePoint[];
+    updates: UpdateMap;
     hints: Hints;
 }

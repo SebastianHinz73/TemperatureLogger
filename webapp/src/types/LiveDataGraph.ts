@@ -16,10 +16,7 @@ export interface SensorDataList {
     SingleSensor: DPoint[];
 }
 
-export interface UpdatePoint {
-    serial: string;
-    data: number;
-}
+export type UpdateMap = Map<string, number>;
 
 
 /*

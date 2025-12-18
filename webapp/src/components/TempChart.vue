@@ -6,7 +6,7 @@
 </template>
 
 <script lang="ts">
-import type { UpdatePoint } from '@/types/LiveDataGraph';
+import type { UpdateMap } from '@/types/LiveDataGraph';
 import { authHeader, handleResponse } from '@/utils/authentication';
 import { defineComponent, type PropType } from 'vue';
 import CardElement from './CardElement.vue';
@@ -43,20 +43,25 @@ interface DataPoint {
 
 export default defineComponent({
     props: {
-        updates: { type: Object as PropType<UpdatePoint[]>, required: true },
+        updates: { type: Object as PropType<UpdateMap>, required: true },
     },
     watch: {
         updates: {
-            handler(newVal: any) { // TODO: type Map?
+            handler(newVal: UpdateMap) { // receive updates from board on websocket
+                console.table(newVal);
                 const serialList = Object.keys(newVal);
+                const valueList = Object.values(newVal);
                 for (let i = 0; i < serialList.length; i++) {
                     const serial = serialList[i];
-                    if(serial !== undefined) {
-                        const config = newVal[serial];
-                        console.log('Updates for serial ' + serial + ' data ' + JSON.stringify(config));
-                        //this.addDataAsDataPoint(serial, [{ x: Date.now()/1000, y: config }]);
+                    const value = valueList[i];
+                    if(serial !== undefined && value !== undefined) {
+                        //this.addDataAsDataPoint(serial, [{ x: Date.now()/1000, y: value }]);
+                        //this.addDataAsDataPoint(serial, [{ x: this.dummyCnt*10, y: this.dummyCnt + 50 }]);
+                         //this.dummyCnt++;
                     }
                 }
+                //console.log(this.configData);
+
             },
             deep: true,
         },
@@ -68,6 +73,8 @@ export default defineComponent({
     data() {
         return {
             updateInterval: 0,
+            dummyCnt: 0,
+            dummyData: [] as DataPoint[],
 
             configData: {} as IDatasets[],
 
@@ -94,12 +101,12 @@ export default defineComponent({
         this.fetchData();
         //this.repeateData();
 
-        //if (this.updateInterval) {
-        //    clearTimeout(this.updateInterval);
-        //}
+        if (this.updateInterval) {
+            clearTimeout(this.updateInterval);
+        }
     },
     unmounted() {
-       // clearInterval(this.updateInterval);
+        clearInterval(this.updateInterval); // TODO clearTimeout / clearInterval
     },
     computed: {
         chartData: function () {
@@ -109,7 +116,8 @@ export default defineComponent({
                     datasets: []
                 };
             }
-            console.log('Chart data computed ' + JSON.stringify(this.configData));
+            //console.log('Chart data computed ' + JSON.stringify(this.configData));
+            //this.$forceUpdate();
             return { datasets: this.configData };
         },
     },
@@ -120,6 +128,7 @@ export default defineComponent({
             fetch('/api/livedata/graph', { headers: authHeader() })
                 .then((response) => handleResponse(response, this.$emitter, this.$router))
                 .then((data) => {
+                    this.dummyCnt++;
 
                     if (data['config'] !== undefined) {
                         let sets: IDatasets[] = [];
@@ -137,40 +146,43 @@ export default defineComponent({
                                     backgroundColor: config.color,
                                     showLine: true,
                                     borderWidth: 2,
-                                    data: [ {x: 10,y: 22},  {x: 20,y: 25} ] ,
-                                    //data: [] ,
+                                    //data: [ {x: 10,y: 22},  {x: 20,y: this.dummyCnt} ] ,
+                                    data: [] ,
                                 };
-                                console.log(JSON.stringify(set));
+                                console.log(JSON.stringify(set.data));
                                 sets.push(set);
                             }
 
                         }
                         this.configData = sets;
                     }
-
-                 /*   if (data['data'] !== undefined)
+                    console.log('TempChart fetchData completed ' + this.dummyCnt);
+                    if (data['data'] !== undefined)
                     {
-                        console.log('Graph data received ' + JSON.stringify(data['data']));
+                        //console.log('Graph data received ' + JSON.stringify(data['data']));
+                        //console.table(data['data']);
                         const serialList = Object.keys(data['data']);
+                        const valueList = Object.values(data['data']) as string[];
+
                         for (let i = 0; i < serialList.length; i++) {
                             const serial = serialList[i];
-                            if(serial !== undefined){
-                                const readings = data['data'][serial];
-                                this.setData(serial, readings);
+                            const value = valueList[i];
+
+                            if(serial !== undefined && value !== undefined) {
+                                //console.table(JSON.parse(value));
+                                this.setData(serial, JSON.parse(value) as DataPoint[]);
                             }
                         }
+                        //console.log(this.configData);
                     }
-*/
+
+                    this.updateInterval = setTimeout(() => {
+                        //console.log("TempChart fetchData interval");
+                        //this.fetchData();
+                    }, 1000);
+
                 });
 
-        },
-        repeateData__remove(serial: string, data: string) {
-
-            console.log("TempChart fetchData interval" + serial + data);
-
-            //this.updateInterval = setTimeout(() => {
-            //            this.repeateData();
-            //        }, 5);
         },
         addDataAsDataPoint(serial: string, data: DataPoint[]) {
             //const id = this.configData.findIndex(el => (el.serial === serial));
@@ -179,11 +191,20 @@ export default defineComponent({
             let obj = this.configData.find(el => (el.serial === serial));
             if (obj) {
                 //console.log('Found');
-                obj.data = [...obj.data, ...data];
+                console.log(typeof data);
+                //obj.data = [...obj.data, ...data];
+
+                this.updateInterval = setTimeout(() => {
+                        //console.log("TempChart fetchData interval");
+                        //console.table(this.configData['data']);
+                        //this.fetchData();
+                        obj.data = [{"x":10,"y":22},{"x":20,"y":27}] as DataPoint[];
+
+                    }, 1000);
                 //console.log(JSON.stringify(this.configData));
             }
 
-
+            //this.$forceUpdate();
 
             //this.configData[id].data = JSON.parse(data) as DataPoint[];
 
@@ -193,13 +214,10 @@ export default defineComponent({
             //    this.data[name] = [...this.data[name], ...JSON.parse(this.liveData[name])];
             //}
         },
-        setData(serial: string, data: string) {
-
-            let obj = this.configData.find(el => (el.serial === serial));
+        setData(serial: string, data: DataPoint[]) {
+            let obj = this.configData.find(el => (el.serial === serial)) as IDatasets;
             if (obj) {
-                //console.log('Found');
-                obj.data = JSON.parse(data) as DataPoint[];
-                //console.log(JSON.stringify(this.configData));
+                obj.data = data;
             }
             //this.configData[id].data = JSON.parse(data) as DataPoint[];
 
