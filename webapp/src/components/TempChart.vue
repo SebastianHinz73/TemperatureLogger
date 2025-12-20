@@ -48,7 +48,7 @@ export default defineComponent({
     watch: {
         updates: {
             handler(newVal: UpdateMap) { // receive updates from board on websocket
-                console.table(newVal);
+                //console.table(newVal);
                 const serialList = Object.keys(newVal);
                 const valueList = Object.values(newVal);
                 for (let i = 0; i < serialList.length; i++) {
@@ -56,8 +56,8 @@ export default defineComponent({
                     const value = valueList[i];
                     if(serial !== undefined && value !== undefined) {
                         //this.addDataAsDataPoint(serial, [{ x: Date.now()/1000, y: value }]);
-                        //this.addDataAsDataPoint(serial, [{ x: this.dummyCnt*10, y: this.dummyCnt + 50 }]);
-                         //this.dummyCnt++;
+                        this.addDataAsDataPoint(serial, [{ x: this.dummyCnt*10, y: this.dummyCnt + 50 }]);
+                        this.dummyCnt++;
                     }
                 }
                 //console.log(this.configData);
@@ -78,7 +78,7 @@ export default defineComponent({
 
             configData: {} as IDatasets[],
 
-            chartOptions: {
+            chartOptions123: {
                 responsive: true,
                 maintainAspectRatio: false,
                 elements: {
@@ -120,8 +120,14 @@ export default defineComponent({
             //this.$forceUpdate();
             return { datasets: this.configData };
         },
+        chartOptions: function () {
+            return this.chartOptions123;
+        },
     },
     methods: {
+        copyDataset() {
+            return JSON.parse(JSON.stringify(this.configData));
+        },
         fetchData() {
 
         //this.dataLoading = true;
@@ -146,8 +152,8 @@ export default defineComponent({
                                     backgroundColor: config.color,
                                     showLine: true,
                                     borderWidth: 2,
-                                    //data: [ {x: 10,y: 22},  {x: 20,y: this.dummyCnt} ] ,
-                                    data: [] ,
+                                    data: [ {x: 10,y: 22},  {x: 20,y: this.dummyCnt} ] ,
+                                    //data: [] ,
                                 };
                                 console.log(JSON.stringify(set.data));
                                 sets.push(set);
@@ -187,18 +193,43 @@ export default defineComponent({
         addDataAsDataPoint(serial: string, data: DataPoint[]) {
             //const id = this.configData.findIndex(el => (el.serial === serial));
             //console.log('Found index ' + id + ' for serial ' + serial);
+            // https://stackoverflow.com/questions/75836161/vue-chartjs-how-can-i-update-a-chart
+            // https://github.com/chartjs/Chart.js/issues/3614
 
             let obj = this.configData.find(el => (el.serial === serial));
             if (obj) {
-                //console.log('Found');
-                console.log(typeof data);
+                console.log('Found');
+                //console.log(typeof data);
                 //obj.data = [...obj.data, ...data];
+                //obj.data = [{"x":10,"y":22},{"x":20,"y":27}] as DataPoint[];
+                //obj.data =  [ {x: 10,y: 22},  {x: 30,y: this.dummyCnt} ]
+                obj.label = obj.label + 'sas ';
+                //console.log(chart.data);
 
+                /*let sets: IDatasets[] = [];
+
+
+let set: IDatasets = {
+                                    serial: "serial",
+                                    label: "config.name",
+                                    fill: false,
+                                    borderColor: "#ff00ff",
+                                    backgroundColor: "#ff00ff",
+                                    showLine: true,
+                                    borderWidth: 2,
+                                    data: [ {x: 10,y: 22},  {x: 20,y: this.dummyCnt} ] ,
+                                    //data: [] ,
+                                };
+
+
+                                sets.push(set);
+                this.configData = sets;
+*/
                 this.updateInterval = setTimeout(() => {
                         //console.log("TempChart fetchData interval");
                         //console.table(this.configData['data']);
                         //this.fetchData();
-                        obj.data = [{"x":10,"y":22},{"x":20,"y":27}] as DataPoint[];
+                        //obj.data = [{"x":10,"y":22},{"x":20,"y":27}] as DataPoint[];
 
                     }, 1000);
                 //console.log(JSON.stringify(this.configData));

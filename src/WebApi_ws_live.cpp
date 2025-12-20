@@ -101,6 +101,8 @@ void WebApiWsLiveClass::sendDataTaskCb()
 
         const CONFIG_T& config = Configuration.get();
         auto tempArray = root["updates"].to<JsonObject>();
+        static float add = 0.0;
+        add += 0.05;
 
         for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
             if (config.DS18B20.Sensors[i].Serial == 0) {
@@ -114,7 +116,7 @@ void WebApiWsLiveClass::sendDataTaskCb()
             }
 
             String serial = String(config.DS18B20.Sensors[i].Serial, 16);
-            tempArray[serial] = value;
+            tempArray[serial] = value+add;
         }
 
         String buffer;
