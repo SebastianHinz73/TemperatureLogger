@@ -1,7 +1,7 @@
 <template>
     <div
         class="row row-cols-1 row-cols-md-3 g-3">
-        <Scatter :data="chartData" :options="chartOptions" />
+        <Scatter ref="mychart" :data="chartData" :options="chartOptions" />
     </div>
 </template>
 
@@ -48,20 +48,28 @@ export default defineComponent({
     watch: {
         updates: {
             handler(newVal: UpdateMap) { // receive updates from board on websocket
-                //console.table(newVal);
+                console.table(newVal);
+
+                const copyDataset: IDatasets[] = this.copyDataset();
+
                 const serialList = Object.keys(newVal);
                 const valueList = Object.values(newVal);
                 for (let i = 0; i < serialList.length; i++) {
                     const serial = serialList[i];
                     const value = valueList[i];
                     if(serial !== undefined && value !== undefined) {
+                        let src = this.configData.find(el => (el.serial === serial));
+                        let dst = copyDataset.find(el => (el.serial === serial));
+                        if (src && dst) {
+                            //dst.data = [...src.data, ...JSON.parse(value) as DataPoint[]];
+                            dst.data = [...src.data, JSON.parse(value) as DataPoint ] ;
+                        }
+
                         //this.addDataAsDataPoint(serial, [{ x: Date.now()/1000, y: value }]);
-                        this.addDataAsDataPoint(serial, [{ x: this.dummyCnt*10, y: this.dummyCnt + 50 }]);
-                        this.dummyCnt++;
+                        //this.addDataAsDataPoint(serial, [{ x: this.dummyCnt*10, y: this.dummyCnt + 50 }]);
                     }
                 }
-                //console.log(this.configData);
-
+                this.configData = copyDataset;
             },
             deep: true,
         },
@@ -72,10 +80,6 @@ export default defineComponent({
     },
     data() {
         return {
-            updateInterval: 0,
-            dummyCnt: 0,
-            dummyData: [] as DataPoint[],
-
             configData: {} as IDatasets[],
 
             chartOptions123: {
@@ -101,12 +105,8 @@ export default defineComponent({
         this.fetchData();
         //this.repeateData();
 
-        if (this.updateInterval) {
-            clearTimeout(this.updateInterval);
-        }
     },
     unmounted() {
-        clearInterval(this.updateInterval); // TODO clearTimeout / clearInterval
     },
     computed: {
         chartData: function () {
@@ -125,8 +125,30 @@ export default defineComponent({
         },
     },
     methods: {
-        copyDataset() {
-            return JSON.parse(JSON.stringify(this.configData));
+        copyDataset(): IDatasets[] {
+            let newSets: IDatasets[] = [];
+
+            for (let i = 0; i < this.configData.length; i++) {
+                const config = this.configData[i];
+
+                if(config !== undefined) {
+                    let set: IDatasets = {
+                        serial: config.serial,
+                        label: config.label,
+                        fill: false,
+                        borderColor: config.borderColor,
+                        backgroundColor: config.borderColor,
+                        showLine: true,
+                        borderWidth: 2,
+                        //data: [ {x: 10,y: 22},  {x: 20,y: this.dummyCnt} ] ,
+                        data: [] ,
+                    };
+                    //console.log(JSON.stringify(set.data));
+                    newSets.push(set);
+                }
+            }
+            return newSets;
+            //return JSON.parse(JSON.stringify(this.configData));
         },
         fetchData() {
 
@@ -134,8 +156,6 @@ export default defineComponent({
             fetch('/api/livedata/graph', { headers: authHeader() })
                 .then((response) => handleResponse(response, this.$emitter, this.$router))
                 .then((data) => {
-                    this.dummyCnt++;
-
                     if (data['config'] !== undefined) {
                         let sets: IDatasets[] = [];
 
@@ -152,7 +172,7 @@ export default defineComponent({
                                     backgroundColor: config.color,
                                     showLine: true,
                                     borderWidth: 2,
-                                    data: [ {x: 10,y: 22},  {x: 20,y: this.dummyCnt} ] ,
+                                    data: [ {x: 10,y: 22},  {x: 20,y: 30} ] ,
                                     //data: [] ,
                                 };
                                 console.log(JSON.stringify(set.data));
@@ -162,7 +182,7 @@ export default defineComponent({
                         }
                         this.configData = sets;
                     }
-                    console.log('TempChart fetchData completed ' + this.dummyCnt);
+
                     if (data['data'] !== undefined)
                     {
                         //console.log('Graph data received ' + JSON.stringify(data['data']));
@@ -175,88 +195,16 @@ export default defineComponent({
                             const value = valueList[i];
 
                             if(serial !== undefined && value !== undefined) {
-                                //console.table(JSON.parse(value));
-                                this.setData(serial, JSON.parse(value) as DataPoint[]);
+                                const obj = this.configData.find(el => (el.serial === serial)) as IDatasets;
+                                if (obj) {
+                                    obj.data = JSON.parse(value) as DataPoint[];
+                                }
                             }
                         }
                         //console.log(this.configData);
                     }
-
-                    this.updateInterval = setTimeout(() => {
-                        //console.log("TempChart fetchData interval");
-                        //this.fetchData();
-                    }, 1000);
-
                 });
 
-        },
-        addDataAsDataPoint(serial: string, data: DataPoint[]) {
-            //const id = this.configData.findIndex(el => (el.serial === serial));
-            //console.log('Found index ' + id + ' for serial ' + serial);
-            // https://stackoverflow.com/questions/75836161/vue-chartjs-how-can-i-update-a-chart
-            // https://github.com/chartjs/Chart.js/issues/3614
-
-            let obj = this.configData.find(el => (el.serial === serial));
-            if (obj) {
-                console.log('Found');
-                //console.log(typeof data);
-                //obj.data = [...obj.data, ...data];
-                //obj.data = [{"x":10,"y":22},{"x":20,"y":27}] as DataPoint[];
-                //obj.data =  [ {x: 10,y: 22},  {x: 30,y: this.dummyCnt} ]
-                obj.label = obj.label + 'sas ';
-                //console.log(chart.data);
-
-                /*let sets: IDatasets[] = [];
-
-
-let set: IDatasets = {
-                                    serial: "serial",
-                                    label: "config.name",
-                                    fill: false,
-                                    borderColor: "#ff00ff",
-                                    backgroundColor: "#ff00ff",
-                                    showLine: true,
-                                    borderWidth: 2,
-                                    data: [ {x: 10,y: 22},  {x: 20,y: this.dummyCnt} ] ,
-                                    //data: [] ,
-                                };
-
-
-                                sets.push(set);
-                this.configData = sets;
-*/
-                this.updateInterval = setTimeout(() => {
-                        //console.log("TempChart fetchData interval");
-                        //console.table(this.configData['data']);
-                        //this.fetchData();
-                        //obj.data = [{"x":10,"y":22},{"x":20,"y":27}] as DataPoint[];
-
-                    }, 1000);
-                //console.log(JSON.stringify(this.configData));
-            }
-
-            //this.$forceUpdate();
-
-            //this.configData[id].data = JSON.parse(data) as DataPoint[];
-
-            //if (initialLoadiing) {
-            //    this.data[name] = JSON.parse(this.liveData[name]);
-            ///} else {
-            //    this.data[name] = [...this.data[name], ...JSON.parse(this.liveData[name])];
-            //}
-        },
-        setData(serial: string, data: DataPoint[]) {
-            let obj = this.configData.find(el => (el.serial === serial)) as IDatasets;
-            if (obj) {
-                obj.data = data;
-            }
-            //this.configData[id].data = JSON.parse(data) as DataPoint[];
-
-            //if (initialLoadiing) {
-            //    this.data[name] = JSON.parse(this.liveData[name]);
-            ///} else {
-            //    this.data[name] = [...this.data[name], ...JSON.parse(this.liveData[name])];
-            //}
         },
         handleLoading() {
             //if (initialLoading) {
