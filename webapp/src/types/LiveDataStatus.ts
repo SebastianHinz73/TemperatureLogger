@@ -1,5 +1,3 @@
-import type { UpdateMap } from '@/types/LiveDataGraph';
-
 export interface Temperature {
     serial: number;
     name: string;
@@ -17,3 +15,5 @@ export interface LiveData {
     updates: UpdateMap;
     hints: Hints;
 }
+
+export type UpdateMap = Map<string, number>;

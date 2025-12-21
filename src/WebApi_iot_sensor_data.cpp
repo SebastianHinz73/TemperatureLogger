@@ -18,6 +18,7 @@ void WebApiIotSensorData::init(AsyncWebServer& server, Scheduler& scheduler)
 
     server.on("/config", HTTP_GET, std::bind(&WebApiIotSensorData::onConfig, this, _1));
     server.on("/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
+    server.on("/api/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
 }
 
 void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)

@@ -86,7 +86,7 @@ bool RamDriveClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller&
         size_t ret = 0;
         size_t maxCnt = maxLen / ENTRY_TO_STRING_SIZE;
 
-        // MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d, fileSize:%d, maxCnt:%d\r\n", maxLen, alreadySent, fileSize, maxCnt);
+         MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d, fileSize:%d, maxCnt:%d\r\n", maxLen, alreadySent, fileSize, maxCnt);
         for (size_t cnt = 0; cnt < maxCnt; cnt++) {
             if (!_ramBuffer->getEntry(serial, start_of_day, act)) {
                 break;

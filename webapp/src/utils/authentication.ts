@@ -115,3 +115,37 @@ function handleAuthResponse(response: Response) {
         return data;
     });
 }
+
+export function handleBinaryResponse(
+    response: Response,
+    emitter: Emitter<Record<EventType, unknown>>,
+    router: Router,
+    ignore_error: boolean = false
+) {
+    return response.text().then((blob) => {
+        const data = blob;
+        if (!response.ok) {
+            if (response.status === 401) {
+                // auto logout if 401 response returned from api
+                logout();
+                emitter.emit('logged-out');
+                router.push({
+                    path: '/login',
+                    query: { returnUrl: router.currentRoute.value.fullPath },
+                });
+                return Promise.reject();
+            }
+
+            const error = {
+                message: data || response.statusText,
+                status: response.status || 0,
+            };
+            if (!ignore_error) {
+                router.push({ name: 'Error' });
+            }
+            return Promise.reject(error);
+        }
+
+        return data;
+    });
+}

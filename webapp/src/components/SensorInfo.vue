@@ -14,8 +14,7 @@
 </template>
 
 <script lang="ts">
-import type { UpdateMap } from '@/types/LiveDataGraph';
-import type { Temperature } from '@/types/LiveDataStatus';
+import type { Temperature, UpdateMap } from '@/types/LiveDataStatus';
 import { defineComponent, type PropType } from 'vue';
 
 export default defineComponent({
@@ -26,8 +25,15 @@ export default defineComponent({
     watch: {
         updates: {
             handler(newVal: UpdateMap) { // receive updates from board on websocket
+                //if (JSON.stringify(newVal) == JSON.stringify(oldVal) )
+                {
+                    //return;
+                }
+
                 this.values = newVal;
-             },
+                //console.log(oldVal);
+                console.log(newVal);
+            },
             deep: true,
         },
     },

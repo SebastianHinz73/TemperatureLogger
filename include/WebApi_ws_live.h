@@ -19,6 +19,7 @@ private:
 
     void onLivedataStatus(AsyncWebServerRequest* request);
     void onGraphUpdate(AsyncWebServerRequest* request);
+    void onGraphData(AsyncWebServerRequest* request);
     void onWebsocketEvent(AsyncWebSocket* server, AsyncWebSocketClient* client, AwsEventType type, void* arg, uint8_t* data, size_t len);
 
     AsyncWebSocket _ws;

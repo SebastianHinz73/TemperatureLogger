@@ -101,9 +101,11 @@ export default defineComponent({
                 //console.log(event);
                 if (event.data != '{}') {
                     const newData = JSON.parse(event.data);
+                    //console.log(newData);
 
                     Object.assign(this.liveData.temperatures, newData.temperatures);
                     //Object.assign(this.liveData.updates, newData.updates);
+                   // Object.assign(this.liveData.updates2, newData.updates2);
                     Object.assign(this.liveData.hints, newData.hints);
 
                     let m = new Map<string, number>();
@@ -120,6 +122,8 @@ export default defineComponent({
                         }
                     }
                     this.liveData.updates = m;
+                    //this.liveData.updates2 = newData.updates;
+
                     //console.log(m);
 
                     this.dataLoading = false;
