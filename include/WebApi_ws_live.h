@@ -15,7 +15,7 @@ public:
 private:
     void generateJsonResponse(JsonVariant& root);
     void generateGraphConfigResponse(JsonVariant& root);
-    void generateGraphDataResponse(bool update,JsonVariant& root);
+    void generateGraphDataResponse(JsonVariant& root);
 
     void onLivedataStatus(AsyncWebServerRequest* request);
     void onGraphUpdate(AsyncWebServerRequest* request);

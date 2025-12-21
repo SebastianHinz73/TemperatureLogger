@@ -18,7 +18,6 @@ export interface SensorDataList {
 
 export type UpdateMap = Map<string, number>;
 
-
 /*
 export const validDataNames = {
     data_pro3em: 1,

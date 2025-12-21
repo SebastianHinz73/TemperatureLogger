@@ -3,8 +3,6 @@ import type { UpdateMap } from '@/types/LiveDataGraph';
 export interface Temperature {
     serial: number;
     name: string;
-    time: number;
-    value: number;
     valid: boolean;
 }
 

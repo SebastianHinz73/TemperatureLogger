@@ -41,6 +41,7 @@ interface DataPoint {
     y: number;
 }
 
+
 export default defineComponent({
     props: {
         updates: { type: Object as PropType<UpdateMap>, required: true },
@@ -50,23 +51,29 @@ export default defineComponent({
             handler(newVal: UpdateMap) { // receive updates from board on websocket
                 console.table(newVal);
 
+                const time = new Date();
+                const now = time.getTime() / 1000;
+
+                const text = ("0" + time.getHours()).slice(-2) + ':' + ("0" + time.getMinutes()).slice(-2) + ':' + ("0" + time.getSeconds()).slice(-2);
+                console.log(text);
+
                 const copyDataset: IDatasets[] = this.copyDataset();
 
-                const serialList = Object.keys(newVal);
-                const valueList = Object.values(newVal);
-                for (let i = 0; i < serialList.length; i++) {
-                    const serial = serialList[i];
-                    const value = valueList[i];
-                    if(serial !== undefined && value !== undefined) {
-                        let src = this.configData.find(el => (el.serial === serial));
-                        let dst = copyDataset.find(el => (el.serial === serial));
-                        if (src && dst) {
-                            //dst.data = [...src.data, ...JSON.parse(value) as DataPoint[]];
-                            dst.data = [...src.data, JSON.parse(value) as DataPoint ] ;
+                for (let i = 0; i < this.configData.length; i++) {
+                    const serial = this.configData[i]?.serial ?? '';
+                    if(serial.length)
+                    {
+                        const value = newVal.get(serial);
+                        if(value !== undefined)
+                        {
+                            let src = this.configData.find(el => (el.serial === serial));
+                            let dst = copyDataset.find(el => (el.serial === serial));
+                            if (src && dst) {
+                                //dst.data = [...src.data, ...JSON.parse(value) as DataPoint[]];
+                                dst.data = [...src.data,   { x: now, y: value } ] ;
+                                dst.data = dst.data.slice(-15); // keep only last 500 data points
+                            }
                         }
-
-                        //this.addDataAsDataPoint(serial, [{ x: Date.now()/1000, y: value }]);
-                        //this.addDataAsDataPoint(serial, [{ x: this.dummyCnt*10, y: this.dummyCnt + 50 }]);
                     }
                 }
                 this.configData = copyDataset;
@@ -80,20 +87,34 @@ export default defineComponent({
     },
     data() {
         return {
-            configData: {} as IDatasets[],
+            //newestXAxis: 0 as number,
+            //cnt: 30,
+            //startOfDay: 0 as number,
 
+            configData: {} as IDatasets[],
             chartOptions123: {
                 responsive: true,
                 maintainAspectRatio: false,
                 elements: {
                     point: {
-                        radius: 0,
+                        radius: 2,
                     },
                 },
                 animation: {
                     duration: 0,
                 },
-                 plugins: {
+                scales: {
+                    x: {
+                        ticks: {
+                            callback: function (value: any) {
+                                const time = new Date(value*1000);
+                                const text = ("0" + time.getHours()).slice(-2) + ':' + ("0" + time.getMinutes()).slice(-2) + ':' + ("0" + time.getSeconds()).slice(-2);
+                                return text;
+                            },
+                        },
+                    },
+                },
+                plugins: {
                     legend: {
                         display: true,
                     },
@@ -103,8 +124,6 @@ export default defineComponent({
     },
     created() {
         this.fetchData();
-        //this.repeateData();
-
     },
     unmounted() {
     },
@@ -140,15 +159,12 @@ export default defineComponent({
                         backgroundColor: config.borderColor,
                         showLine: true,
                         borderWidth: 2,
-                        //data: [ {x: 10,y: 22},  {x: 20,y: this.dummyCnt} ] ,
                         data: [] ,
                     };
-                    //console.log(JSON.stringify(set.data));
                     newSets.push(set);
                 }
             }
             return newSets;
-            //return JSON.parse(JSON.stringify(this.configData));
         },
         fetchData() {
 
@@ -172,10 +188,9 @@ export default defineComponent({
                                     backgroundColor: config.color,
                                     showLine: true,
                                     borderWidth: 2,
-                                    data: [ {x: 10,y: 22},  {x: 20,y: 30} ] ,
-                                    //data: [] ,
+                                    data: [] ,
                                 };
-                                console.log(JSON.stringify(set.data));
+                                //console.log(JSON.stringify(set.data));
                                 sets.push(set);
                             }
 
@@ -187,6 +202,9 @@ export default defineComponent({
                     {
                         //console.log('Graph data received ' + JSON.stringify(data['data']));
                         //console.table(data['data']);
+                        //console.log(Array.from(data['data']));
+                        //console.log(Object.fromEntries(data['data']));
+
                         const serialList = Object.keys(data['data']);
                         const valueList = Object.values(data['data']) as string[];
 
@@ -197,7 +215,7 @@ export default defineComponent({
                             if(serial !== undefined && value !== undefined) {
                                 const obj = this.configData.find(el => (el.serial === serial)) as IDatasets;
                                 if (obj) {
-                                    obj.data = JSON.parse(value) as DataPoint[];
+                                    //obj.data = JSON.parse(value) as DataPoint[];
                                 }
                             }
                         }
@@ -205,13 +223,6 @@ export default defineComponent({
                     }
                 });
 
-        },
-        handleLoading() {
-            //if (initialLoading) {
-            //    this.data[name] = JSON.parse(this.liveData[name]);
-            ///} else {
-            //    this.data[name] = [...this.data[name], ...JSON.parse(this.liveData[name])];
-            //}
         },
     },
 });

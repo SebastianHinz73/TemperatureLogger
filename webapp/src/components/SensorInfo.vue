@@ -6,9 +6,7 @@
                     sensor.name
                 }}</div>
                 <div class="card-body card-text text-center">
-                    <h2>
-                        {{ sensor.value.toFixed(2) }}
-                    </h2>
+                    <h2> {{ getValue(sensor).toFixed(2) }} </h2>
                 </div>
             </div>
         </div>
@@ -16,12 +14,37 @@
 </template>
 
 <script lang="ts">
+import type { UpdateMap } from '@/types/LiveDataGraph';
 import type { Temperature } from '@/types/LiveDataStatus';
 import { defineComponent, type PropType } from 'vue';
 
 export default defineComponent({
     props: {
         sensorData: { type: Object as PropType<Temperature[]>, required: true },
+        updates: { type: Object as PropType<UpdateMap>, required: true },
+    },
+    watch: {
+        updates: {
+            handler(newVal: UpdateMap) { // receive updates from board on websocket
+                this.values = newVal;
+             },
+            deep: true,
+        },
+    },
+    data() {
+        return {
+             values: {} as UpdateMap,
+         };
+    },
+    methods: {
+        getValue(temperature: Temperature): number {
+            let el = Array.from(this.values).find(row => row[0] == temperature.serial.toString())
+            if(el !== undefined)
+            {
+                return el[1];
+            }
+            return 0;
+        },
     },
 });
 </script>

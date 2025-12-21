@@ -96,13 +96,10 @@ void WebApiWsLiveClass::sendDataTaskCb()
         JsonDocument root;
         JsonVariant var = root;
 
-        generateJsonResponse(var); // obsolete, TODO: remove
-
+        generateJsonResponse(var);
 
         const CONFIG_T& config = Configuration.get();
         auto tempArray = root["updates"].to<JsonObject>();
-        static float add = 0.0;
-        add += 0.05;
 
         for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
             if (config.DS18B20.Sensors[i].Serial == 0) {
@@ -116,7 +113,7 @@ void WebApiWsLiveClass::sendDataTaskCb()
             }
 
             String serial = String(config.DS18B20.Sensors[i].Serial, 16);
-            tempArray[serial] = value+add;
+            tempArray[serial] = value;
         }
 
         String buffer;
@@ -148,8 +145,6 @@ void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
         tempObj["valid"] = valid;
         tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
         tempObj["name"] = config.DS18B20.Sensors[i].Name;
-        tempObj["time"] = valid ? time : 0;
-        tempObj["value"] = valid ? value : 0;
     }
 
     JsonObject hintObj = root["hints"].to<JsonObject>();
@@ -180,7 +175,6 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
         auto& root = response->getRoot();
 
         generateJsonResponse(root);
-        generateGraphDataResponse(true, root);
 
         WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 
@@ -223,10 +217,10 @@ void WebApiWsLiveClass::generateGraphConfigResponse(JsonVariant& root)
     }
 }
 
-void WebApiWsLiveClass::generateGraphDataResponse(bool update, JsonVariant& root)
+void WebApiWsLiveClass::generateGraphDataResponse(JsonVariant& root)
 {
     const CONFIG_T& config = Configuration.get();
-    auto tempArray = root[update ? "updates" : "data"].to<JsonObject>();
+    auto tempArray = root["data"].to<JsonObject>();
 
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         if (config.DS18B20.Sensors[i].Serial == 0) {
@@ -241,12 +235,8 @@ void WebApiWsLiveClass::generateGraphDataResponse(bool update, JsonVariant& root
 
         String serial = String(config.DS18B20.Sensors[i].Serial, 16);
 
-        if (update) {
-            tempArray[serial] = "[ {\"x\": " + String(time) + ",\"y\": " + String(value) + "} ]";
-        }
-        else {
-            tempArray[serial] = "[]";
-        }
+        tempArray[serial] = "[]";
+
         static int x = 10;
         static int y = 20;
         tempArray[serial] = "[{\"x\":" + String(x++) + ",\"y\":" + String(y++) + "}, {\"x\": " + String(x++) + ",\"y\": " + String(y++) + "}]";
@@ -272,7 +262,7 @@ void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
             generateGraphConfigResponse(root);
         }
 
-        generateGraphDataResponse(false, root);
+        generateGraphDataResponse(root);
 
         /*
         long long timestamp = 0;
