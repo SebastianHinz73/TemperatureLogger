@@ -172,9 +172,9 @@ export default defineComponent({
             fetch('/api/livedata/graph', { headers: authHeader() })
                 .then((response) => handleResponse(response, this.$emitter, this.$router, true))
                 .then((data) => {
+
                     if (data['config'] !== undefined) {
                         let sets: IDatasets[] = [];
-
                         const serialList = Object.keys(data['config']);
                         for (let i = 0; i < serialList.length; i++) {
                             const serial = serialList[i];
@@ -202,12 +202,15 @@ export default defineComponent({
                         .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
                         .then((data) => {
                             //console.log(data);
-                            return;
+                            //return;
                             const arr = [] as DataPoint[];
                             const now = new Date().getTime() / 1000;
 
+                            let cnt = now-60*60;
+
                             data.split('\n').splice(-10).forEach(line => {
                                 //console.log(line);
+                                cnt+=60;
                                 const el = line.split(';')
                                 const t = el[0]?.split(':');
                                 if(t !== undefined && t[0] != undefined && t[1] != undefined && t[2] != undefined && el[1] !== undefined)
@@ -216,39 +219,25 @@ export default defineComponent({
                                     const value = parseFloat(el[1]);
                                     //console.log(t);
                                     //console.log(value);
-                                    const dp = { x: now+time, y: value } as DataPoint;
+                                    const dp = { x: cnt, y: value } as DataPoint;
                                     arr.push(dp);
                                 }
                             });
                             //console.log(arr);
 
                             const obj = this.configData.find(el => (el.serial === '76a9')) as IDatasets;
+                            //const obj = this.configData.find(el => (el.serial === '76a9')) as IDatasets;
                             if (obj) {
                                 obj.data = arr;
                                console.log(arr);
 
                             }
 
-                            //const arr = data.split(';')
-                            //console.log(arr);
-                            //var int8view = new Uint8Array(data, 8);
-                            //console.log(int8view);
-                            //console.log(data.type);
-                            //const ff = data['data'] as BlobData;
-                            //if(ff !== undefined)
-                            {
-                              //  console.log(ff);
-                            }
                         });
 
 
-                    if (data['data'] !== undefined)
+                    if (data['data123'] !== undefined)
                     {
-                        ///console.log('Graph data received ' + JSON.stringify(data['data']));
-                        //console.table(data['data']);
-                        //console.log(Array.from(data['data']));
-                        //console.log(Object.fromEntries(data['data']));
-
                         const serialList = Object.keys(data['data']);
                         const valueList = Object.values(data['data']) as string[];
 

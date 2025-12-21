@@ -32,7 +32,7 @@ export default defineComponent({
 
                 this.values = newVal;
                 //console.log(oldVal);
-                console.log(newVal);
+                //console.log(newVal);
             },
             deep: true,
         },
