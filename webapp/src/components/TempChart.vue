@@ -41,11 +41,6 @@ interface DataPoint {
     y: number;
 }
 
-interface BlobData {
-    data: Int8Array;
-}
-
-
 export default defineComponent({
     props: {
         updates: { type: Object as PropType<UpdateMap>, required: true },
@@ -61,7 +56,7 @@ export default defineComponent({
                 //const text = ("0" + time.getHours()).slice(-2) + ':' + ("0" + time.getMinutes()).slice(-2) + ':' + ("0" + time.getSeconds()).slice(-2);
                 //console.log(text);
 
-                const copyDataset: IDatasets[] = this.copyDataset();
+                const copyDataset: IDatasets[] = this.copyDataset(this.configData);
 
                 for (let i = 0; i < this.configData.length; i++) {
                     const serial = this.configData[i]?.serial ?? '';
@@ -91,7 +86,7 @@ export default defineComponent({
     },
     data() {
         return {
-            configData: {} as IDatasets[],
+            configData: [] as IDatasets[],
             chartOptions123: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -144,12 +139,10 @@ export default defineComponent({
         },
     },
     methods: {
-        copyDataset(): IDatasets[] {
+        copyDataset(src: IDatasets[], copy: boolean = false): IDatasets[] {
             let newSets: IDatasets[] = [];
-
-            for (let i = 0; i < this.configData.length; i++) {
-                const config = this.configData[i];
-
+            for (let i = 0; i < src.length; i++) {
+                const config = src[i];
                 if(config !== undefined) {
                     let set: IDatasets = {
                         serial: config.serial,
@@ -159,12 +152,76 @@ export default defineComponent({
                         backgroundColor: config.borderColor,
                         showLine: true,
                         borderWidth: 2,
-                        data: [] ,
+                        data: copy ? config.data : [],
                     };
                     newSets.push(set);
                 }
             }
             return newSets;
+        },
+        fetchBinaryData(serial: string): DataPoint[] {
+            let points: DataPoint[] = [];
+            const now = new Date().getTime() / 1000;
+
+            fetch('/api/file?id=' + serial + '&start=' + (now-30*60) + '&length=' + (30*60), { headers: authHeader() })
+                .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
+                .then((data) => {
+                    console.log(data.slice(-100));
+
+                    let cnt = now-10*60;
+
+                    data.split('\n').splice(-10).forEach(line => {
+                        //console.log(line);
+                        cnt+=60;
+                        const el = line.split(';')
+                        const t = el[0]?.split(':');
+                        if(t !== undefined && t[0] != undefined && t[1] != undefined && t[2] != undefined && el[1] !== undefined)
+                        {
+                            //const time = parseInt(t[0], 10)*60*60 + parseInt(t[1], 10) * 60 + parseInt(t[2], 10) ;
+                            const value = parseFloat(el[1]);
+                            //console.log(t);
+                            //console.log(value);
+                            const dp = { x: cnt, y: value } as DataPoint;
+                            points.push(dp);
+                        }
+                    });
+                });
+
+            return points;
+        },
+        getColor(index: number, max: number): string {
+            max = Math.floor((max + 1) / 2);
+            const h = 360 / max * Math.floor(index/2); // Hue (0-360)
+            const s = 1;   // Saturation (0-1)
+            const v = (index%2 == 0) ? 1 : 0.8;   // Value (0-1)
+
+            const rgb = this.hsvToRgb(h, s, v);
+
+            return "#" + ("0" + rgb.r.toString(16)).slice(-2) +
+                        ("0" + rgb.g.toString(16)).slice(-2) +
+                        ("0" + rgb.b.toString(16)).slice(-2);
+
+        },
+        hsvToRgb(h: number, s: number, v: number) {
+            let r = 0, g = 0, b = 0;
+            let i = Math.floor(h / 60);
+            let f = h / 60 - i;
+            let p = v * (1 - s);
+            let q = v * (1 - f * s);
+            let t = v * (1 - (1 - f) * s);
+
+            switch (i % 6) {
+                case 0: r = v; g = t; b = p; break;
+                case 1: r = q; g = v; b = p; break;
+                case 2: r = p; g = v; b = t; break;
+                case 3: r = p; g = q; b = v; break;
+                case 4: r = t; g = p; b = v; break;
+                case 5: r = v; g = p; b = q; break;
+            }
+            return {
+                    r: Math.round(r * 255),
+                    g: Math.round(g * 255),
+                    b: Math.round(b * 255)};
         },
         fetchData() {
 
@@ -172,9 +229,9 @@ export default defineComponent({
             fetch('/api/livedata/graph', { headers: authHeader() })
                 .then((response) => handleResponse(response, this.$emitter, this.$router, true))
                 .then((data) => {
+                    let sets: IDatasets[] = [];
 
                     if (data['config'] !== undefined) {
-                        let sets: IDatasets[] = [];
                         const serialList = Object.keys(data['config']);
                         for (let i = 0; i < serialList.length; i++) {
                             const serial = serialList[i];
@@ -184,65 +241,21 @@ export default defineComponent({
                                     serial: serial,
                                     label: config.name,
                                     fill: false,
-                                    borderColor: config.color,
-                                    backgroundColor: config.color,
+                                    borderColor: this.getColor(i, serialList.length),
+                                    backgroundColor: this.getColor(i, serialList.length),
                                     showLine: true,
                                     borderWidth: 2,
-                                    data: [] ,
+                                    data: this.fetchBinaryData(serial),
                                 };
                                 //console.log(JSON.stringify(set.data));
                                 sets.push(set);
+
                             }
                         }
-                        this.configData = sets;
-
-
-                        for (let i = 0; i < serialList.length; i++) {
-                            const serial = serialList[i];
-                            if(serial === undefined) {
-                                continue;
-                            }
-
-                            console.log(serial);
-                            fetch('/api/file?id=' + serial, { headers: authHeader() })
-                                .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
-                                .then((data) => {
-                                    console.log(data.slice(-100));
-
-                                    const arr = [] as DataPoint[];
-                                    const now = new Date().getTime() / 1000;
-
-                                    let cnt = now-10*60;
-
-                                    data.split('\n').splice(-10).forEach(line => {
-                                        //console.log(line);
-                                        cnt+=60;
-                                        const el = line.split(';')
-                                        const t = el[0]?.split(':');
-                                        if(t !== undefined && t[0] != undefined && t[1] != undefined && t[2] != undefined && el[1] !== undefined)
-                                        {
-                                            const time = parseInt(t[0], 10)*60*60 + parseInt(t[1], 10) * 60 + parseInt(t[2], 10) ;
-                                            const value = parseFloat(el[1]);
-                                            //console.log(t);
-                                            //console.log(value);
-                                            const dp = { x: cnt, y: value } as DataPoint;
-                                            arr.push(dp);
-                                        }
-                                    });
-                                    console.log(arr);
-
-                                    const obj = this.configData.find(el => (el.serial === serial)) as IDatasets;
-                                    if (obj) {
-                                        obj.data = arr;
-                                    //
-                                    }
-
-                                });
-
-                        }
+                        console.log("done");
                     }
 
-                    if (data['data123'] !== undefined)
+                    /*if (data['data123'] !== undefined)
                     {
                         const serialList = Object.keys(data['data']);
                         const valueList = Object.values(data['data']) as string[];
@@ -252,7 +265,7 @@ export default defineComponent({
                             const value = valueList[i];
 
                             if(serial !== undefined && value !== undefined) {
-                                const obj = this.configData.find(el => (el.serial === serial)) as IDatasets;
+                                const obj = sets.find(el => (el.serial === serial)) as IDatasets;
                                 if (obj) {
                                     obj.data = JSON.parse(value) as DataPoint[];
                                     console.log(obj.data);
@@ -260,10 +273,12 @@ export default defineComponent({
                             }
                         }
                         //console.log(this.configData);
-                    }
+                    }*/
+                    //Object.assign(this.configData, sets);
+                    this.configData = sets;
                 });
-
         },
+
     },
-});
+ });
 </script>
