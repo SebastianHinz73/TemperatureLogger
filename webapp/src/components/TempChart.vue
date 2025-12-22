@@ -195,46 +195,52 @@ export default defineComponent({
                             }
                         }
                         this.configData = sets;
-                    }
 
-                    //fetch('/api/livedata/graphdata?serial=30377&timestamp=1&interval=60', { headers: authHeader() })
-                    fetch('/api/file?id=76a9', { headers: authHeader() })
-                        .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
-                        .then((data) => {
-                            //console.log(data);
-                            //return;
-                            const arr = [] as DataPoint[];
-                            const now = new Date().getTime() / 1000;
 
-                            let cnt = now-60*60;
-
-                            data.split('\n').splice(-10).forEach(line => {
-                                //console.log(line);
-                                cnt+=60;
-                                const el = line.split(';')
-                                const t = el[0]?.split(':');
-                                if(t !== undefined && t[0] != undefined && t[1] != undefined && t[2] != undefined && el[1] !== undefined)
-                                {
-                                    const time = parseInt(t[0], 10)*60*60 + parseInt(t[1], 10) * 60 + parseInt(t[2], 10) ;
-                                    const value = parseFloat(el[1]);
-                                    //console.log(t);
-                                    //console.log(value);
-                                    const dp = { x: cnt, y: value } as DataPoint;
-                                    arr.push(dp);
-                                }
-                            });
-                            //console.log(arr);
-
-                            const obj = this.configData.find(el => (el.serial === '76a9')) as IDatasets;
-                            //const obj = this.configData.find(el => (el.serial === '76a9')) as IDatasets;
-                            if (obj) {
-                                obj.data = arr;
-                               console.log(arr);
-
+                        for (let i = 0; i < serialList.length; i++) {
+                            const serial = serialList[i];
+                            if(serial === undefined) {
+                                continue;
                             }
 
-                        });
+                            console.log(serial);
+                            fetch('/api/file?id=' + serial, { headers: authHeader() })
+                                .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
+                                .then((data) => {
+                                    console.log(data.slice(-100));
 
+                                    const arr = [] as DataPoint[];
+                                    const now = new Date().getTime() / 1000;
+
+                                    let cnt = now-10*60;
+
+                                    data.split('\n').splice(-10).forEach(line => {
+                                        //console.log(line);
+                                        cnt+=60;
+                                        const el = line.split(';')
+                                        const t = el[0]?.split(':');
+                                        if(t !== undefined && t[0] != undefined && t[1] != undefined && t[2] != undefined && el[1] !== undefined)
+                                        {
+                                            const time = parseInt(t[0], 10)*60*60 + parseInt(t[1], 10) * 60 + parseInt(t[2], 10) ;
+                                            const value = parseFloat(el[1]);
+                                            //console.log(t);
+                                            //console.log(value);
+                                            const dp = { x: cnt, y: value } as DataPoint;
+                                            arr.push(dp);
+                                        }
+                                    });
+                                    console.log(arr);
+
+                                    const obj = this.configData.find(el => (el.serial === serial)) as IDatasets;
+                                    if (obj) {
+                                        obj.data = arr;
+                                    //
+                                    }
+
+                                });
+
+                        }
+                    }
 
                     if (data['data123'] !== undefined)
                     {
