@@ -242,7 +242,9 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
     }
 
     try {
-        std::lock_guard<std::mutex> lock(_mutex);
+        //std::lock_guard<std::mutex> lock(_mutex);
+        _mutex.lock();
+
 
         tm timeinfo;
         if (!getLocalTime(&timeinfo, 5)) {
@@ -268,7 +270,11 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
         }
 
         AsyncWebServerResponse* response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-            return responseFiller(buffer, maxLen, alreadySent);
+            int send = responseFiller(buffer, maxLen, alreadySent);
+            if(send == 0) {
+                _mutex.unlock();
+            }
+            return send;
         });
 
         response->addHeader("Server", "ESP Async Web Server");

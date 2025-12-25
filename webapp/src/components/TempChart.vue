@@ -157,25 +157,26 @@ export default defineComponent({
             }
             return newSets;
         },
-        fetchBinaryData(serial: string): DataPoint[] {
+        async fetchBinaryData(serial: string): Promise<DataPoint[]> {
             let points: DataPoint[] = [];
             const now = new Date().getTime() / 1000;
 
-            fetch('/api/livedata/graphdata?id=' + serial + '&start=' + (now-30*60) + '&length=' + (30*60), { headers: authHeader() })
-                .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
-                .then((data) => {
-                    //console.log(data.slice(-100));
-                    data.split('\n').forEach(line => {
-                        const el = line.split(';')
-                        if(el[0] !== undefined && el[1] !== undefined)
-                        {
-                            const dp = { x: parseInt(el[0], 10), y: parseFloat(el[1]) } as DataPoint;
-                            points.push(dp);
-                        }
+            return new Promise((resolve) => {
+                fetch('/api/livedata/graphdata?id=' + serial + '&start=' + (now-30*60) + '&length=' + (30*60), { headers: authHeader() })
+                    .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
+                    .then((data) => {
+                        //console.log(data.slice(-100));
+                        data.split('\n').forEach(line => {
+                            const el = line.split(';')
+                            if(el[0] !== undefined && el[1] !== undefined)
+                            {
+                                const dp = { x: parseInt(el[0], 10), y: parseFloat(el[1]) } as DataPoint;
+                                points.push(dp);
+                                resolve(points);
+                            }
+                        });
                     });
-                });
-
-            return points;
+            });
         },
         getColor(index: number, max: number): string {
             max = Math.floor((max + 1) / 2);
@@ -216,9 +217,8 @@ export default defineComponent({
         //this.dataLoading = true;
             fetch('/api/livedata/graph', { headers: authHeader() })
                 .then((response) => handleResponse(response, this.$emitter, this.$router, true))
-                .then((data) => {
+                .then(async (data) => {
                     let sets: IDatasets[] = [];
-
                     if (data['config'] !== undefined) {
                         const serialList = Object.keys(data['config']);
                         for (let i = 0; i < serialList.length; i++) {
@@ -233,14 +233,13 @@ export default defineComponent({
                                     backgroundColor: this.getColor(i, serialList.length),
                                     showLine: true,
                                     borderWidth: 2,
-                                    data: this.fetchBinaryData(serial),
+                                    data: await this.fetchBinaryData(serial),
                                 };
                                 //console.log(JSON.stringify(set.data));
                                 sets.push(set);
                             }
                         }
                     }
-
                     this.configData = sets;
                 });
         },
