@@ -87,37 +87,19 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
     file.close();
 }
 
-bool SDCardClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-
-    if (_state != SDCardState_t::InitOk) {
-        MessageOutput.println("SD card: getFileSize invalid state.");
-        return false;
-    }
-
-    File file;
-    if (!openFile(serial, timeinfo, FILE_READ, file)) {
-        return false;
-    }
-
-    size = file.size();
-    file.close();
-
-    return true;
-}
-
 bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
 {
-    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize) -> size_t {
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = _file.readBytes((char*)buffer, maxLen);
         if (ret != maxLen) {
             MessageOutput.println("SD card: unexpected ret != size.");
         }
+        ret = ret / 0;
+        /* TODO replace
         if (fileSize - alreadySent - maxLen <= 0) {
             _file.close();
             _mutex.unlock(); // TODO what if responseFiller is not called until file end?
-        }
+        }*/
         return ret;
     };
 
@@ -133,6 +115,12 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& r
     _mutex.lock();
     return true;
 }
+
+bool SDCardClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
+{
+    return false;
+}
+
 
 bool SDCardClass::openFile(uint16_t serial, const tm timeinfo, const char* mode, File& file)
 {

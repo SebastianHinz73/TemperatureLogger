@@ -10,5 +10,5 @@ public:
 
 private:
     void onConfig(AsyncWebServerRequest* request);
-    void onFile(AsyncWebServerRequest* request);
+    void onFileApp(AsyncWebServerRequest* request);
 };

@@ -206,42 +206,8 @@ void WebApiWsLiveClass::generateGraphConfigResponse(JsonVariant& root)
             continue;
         }
 
-        const char* colors[] = { "#ff0000", "#c8c8c8","#646464", "#0000FF", "#c8c8c8", "#646464" , "#00FF00", "#00aa00"};
-
-
-        //JsonObject tempObj = tempArray[i].to<JsonObject>();
-        //tempObj["name"] = config.DS18B20.Sensors[i].Name;
-        //tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
-        //tempObj["color"] = colors[i % (sizeof(colors) / sizeof(colors[0]))];
-
         String serial = String(config.DS18B20.Sensors[i].Serial, 16);
         tempArray[serial]["name"] = config.DS18B20.Sensors[i].Name;
-        tempArray[serial]["color"] = colors[i % (sizeof(colors) / sizeof(colors[0]))];
-    }
-}
-
-void WebApiWsLiveClass::generateGraphDataResponse(JsonVariant& root)
-{
-    const CONFIG_T& config = Configuration.get();
-    auto tempArray = root["data"].to<JsonObject>();
-
-    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
-        if (config.DS18B20.Sensors[i].Serial == 0) {
-            continue;
-        }
-        uint32_t time;
-        float value;
-        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
-        if(!valid) {
-            continue;
-        }
-
-        String serial = String(config.DS18B20.Sensors[i].Serial, 16);
-
-        tempArray[serial] = "[]";
-
-        static int y = 20;
-        tempArray[serial] = "[{\"x\":" + String(time-10) + ",\"y\":" + String(y++) + "}, {\"x\": " + String(time) + ",\"y\": " + String(y++) + "}]";
     }
 }
 
@@ -257,27 +223,7 @@ void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
         AsyncJsonResponse* response = new AsyncJsonResponse();
         auto& root = response->getRoot();
 
-        //const CONFIG_T& config = Configuration.get();
-
         generateGraphConfigResponse(root);
-
-        generateGraphDataResponse(root);
-
-        /*
-        long long timestamp = 0;
-        uint32_t interval = 2 * TASK_SECOND;
-
-        if (request->hasParam("timestamp")) {
-            String s = request->getParam("timestamp")->value();
-
-            timestamp = strtoll(s.c_str(), NULL, 10);
-            if (timestamp == 0) {
-                interval = 60 * TASK_SECOND;
-            }
-        }
-*/
-        //root["timestamp"] = timestamp + interval;
-        //root["interval"] = interval;
 
         WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
     } catch (const std::bad_alloc& bad_alloc) {
@@ -298,94 +244,35 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
     try {
         std::lock_guard<std::mutex> lock(_mutex);
 
-        AsyncJsonResponse* response = new AsyncJsonResponse();
-        auto& root = response->getRoot();
-
-        if (!request->hasParam("serial") || !request->hasParam("timestamp") || !request->hasParam("interval")) {
-            root["error"] = "Missing parameter serial, timestamp or interval";
-            WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-            return;
-        }
-
-        int serial = request->getParam("serial")->value().toInt();
-        int timestamp = request->getParam("timestamp")->value().toInt();
-        int interval = request->getParam("interval")->value().toInt();
-
-        if(serial <= 0 || timestamp <= 0 || interval <= 0) {
-            root["error"] = "Parameter serial, timestamp or interval have invalid values.";
-            WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-            return;
-        }
-
-        const CONFIG_T& config = Configuration.get();
-        for (uint8_t i = 0; i <= TEMPLOGGER_MAX_COUNT; i++) {
-            if(i == TEMPLOGGER_MAX_COUNT) {
-                root["error"] = "Sensor not found.";
-                WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-                return;
-            }
-            if (config.DS18B20.Sensors[i].Serial == 0 || config.DS18B20.Sensors[i].Serial != serial) {
-                continue;
-            }
-
-            uint32_t time;
-            float value;
-            bool valid = Datastore.getTemperature(serial, time, value);
-            if(!valid) {
-                root["error"] = "Sensor not valid.";
-                WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-                continue;
-            }
-            break; // found
-        }
-
-        // all checks done
-
-#if 1
         tm timeinfo;
         if (!getLocalTime(&timeinfo, 5)) {
             MessageOutput.printf("WebApiIotSensorData: getLocalTime failed. Ignore\r\n");
-        }
-
-        //uint16_t serial;
-        timeinfo.tm_year = 2025 - 1900;
-        timeinfo.tm_mon = 12 - 1;
-        timeinfo.tm_mday = 21;
-
-        serial = 0x76a0;
-
-        static size_t fileSize;
-        if (!Datastore.getFileSize(serial, timeinfo, fileSize)) {
             request->send(404);
             return;
         }
 
+        if (!request->hasParam("id") || !request->hasParam("start") || !request->hasParam("length")) {
+            MessageOutput.printf("WebApiIotSensorData: Parameter id, start or length missing\r\n");
+            request->send(404);
+            return;
+        }
+
+        uint16_t serial = strtol(request->getParam("id")->value().c_str(), 0, 16);
+        time_t start = request->getParam("start")->value().toInt();
+        uint32_t length = request->getParam("length")->value().toInt();
+
         static ResponseFiller responseFiller;
-        if (!Datastore.getTemperatureFile(serial, timeinfo, responseFiller)) {
+        if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
             MessageOutput.print("WebApiIotSensorData: Can not get file.\r\n");
             return;
         }
 
-        AsyncWebServerResponse* response2 = request->beginResponse("text/plain", fileSize, [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-            return responseFiller(buffer, maxLen, alreadySent, fileSize);
+        AsyncWebServerResponse* response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+            return responseFiller(buffer, maxLen, alreadySent);
         });
-        response2->addHeader("Server", "ESP Async Web Server");
-        request->send(response2);
 
-#else
-        //auto tempArray = root["config"].to<JsonObject>();
-        char buffer[1024*7];
-        memset(buffer, 1, sizeof(buffer));
-
-        //response->_fillBuffer((uint8_t*)buffer, sizeof(buffer));
-        root["0"] = MsgPackBinary(buffer, sizeof(buffer));
-       // String serial = String(config.DS18B20.Sensors[i].Serial, 16);
-
-        //root["timestamp"] = timestamp + interval;
-        //root["interval"] = interval;
-
-        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-#endif
+        response->addHeader("Server", "ESP Async Web Server");
+        request->send(response);
     } catch (const std::bad_alloc& bad_alloc) {
         MessageOutput.printf("Call to /api/livedata/graph temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
         WebApi.sendTooManyRequests(request);

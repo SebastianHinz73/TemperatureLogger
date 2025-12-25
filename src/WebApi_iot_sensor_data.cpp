@@ -17,8 +17,7 @@ void WebApiIotSensorData::init(AsyncWebServer& server, Scheduler& scheduler)
     using std::placeholders::_1;
 
     server.on("/config", HTTP_GET, std::bind(&WebApiIotSensorData::onConfig, this, _1));
-    server.on("/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
-    server.on("/api/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFile, this, _1));
+    server.on("/file", HTTP_GET, std::bind(&WebApiIotSensorData::onFileApp, this, _1));
 }
 
 void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
@@ -61,7 +60,7 @@ void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
     request->send(response);
 }
 
-void WebApiIotSensorData::onFile(AsyncWebServerRequest* request)
+void WebApiIotSensorData::onFileApp(AsyncWebServerRequest* request)
 {
     if (!WebApi.checkCredentialsReadonly(request)) {
         return;
@@ -93,20 +92,14 @@ void WebApiIotSensorData::onFile(AsyncWebServerRequest* request)
         serial = config->Serial;
     }
 
-    static size_t fileSize;
-    if (!Datastore.getFileSize(serial, timeinfo, fileSize)) {
-        request->send(404);
-        return;
-    }
-
     static ResponseFiller responseFiller;
     if (!Datastore.getTemperatureFile(serial, timeinfo, responseFiller)) {
         MessageOutput.print("WebApiIotSensorData: Can not get file.\r\n");
         return;
     }
 
-    AsyncWebServerResponse* response = request->beginResponse("text/plain", fileSize, [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-        return responseFiller(buffer, maxLen, alreadySent, fileSize);
+    AsyncWebServerResponse* response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+        return responseFiller(buffer, maxLen, alreadySent);
     });
     response->addHeader("Server", "ESP Async Web Server");
     request->send(response);

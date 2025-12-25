@@ -1,7 +1,7 @@
 <template>
     <div
         class="row row-cols-1 row-cols-md-3 g-3">
-        <Scatter ref="mychart" :data="chartData" :options="chartOptions" />
+        <Scatter :data="chartData" :options="chartOptions" />
     </div>
 </template>
 
@@ -87,12 +87,13 @@ export default defineComponent({
     data() {
         return {
             configData: [] as IDatasets[],
-            chartOptions123: {
+
+            chartOptions: {
                 responsive: true,
                 maintainAspectRatio: false,
                 elements: {
                     point: {
-                        radius: 2,
+                        radius: 0,
                     },
                 },
                 animation: {
@@ -134,9 +135,6 @@ export default defineComponent({
             //this.$forceUpdate();
             return { datasets: this.configData };
         },
-        chartOptions: function () {
-            return this.chartOptions123;
-        },
     },
     methods: {
         copyDataset(src: IDatasets[], copy: boolean = false): IDatasets[] {
@@ -163,25 +161,15 @@ export default defineComponent({
             let points: DataPoint[] = [];
             const now = new Date().getTime() / 1000;
 
-            fetch('/api/file?id=' + serial + '&start=' + (now-30*60) + '&length=' + (30*60), { headers: authHeader() })
+            fetch('/api/livedata/graphdata?id=' + serial + '&start=' + (now-30*60) + '&length=' + (30*60), { headers: authHeader() })
                 .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
                 .then((data) => {
-                    console.log(data.slice(-100));
-
-                    let cnt = now-10*60;
-
-                    data.split('\n').splice(-10).forEach(line => {
-                        //console.log(line);
-                        cnt+=60;
+                    //console.log(data.slice(-100));
+                    data.split('\n').forEach(line => {
                         const el = line.split(';')
-                        const t = el[0]?.split(':');
-                        if(t !== undefined && t[0] != undefined && t[1] != undefined && t[2] != undefined && el[1] !== undefined)
+                        if(el[0] !== undefined && el[1] !== undefined)
                         {
-                            //const time = parseInt(t[0], 10)*60*60 + parseInt(t[1], 10) * 60 + parseInt(t[2], 10) ;
-                            const value = parseFloat(el[1]);
-                            //console.log(t);
-                            //console.log(value);
-                            const dp = { x: cnt, y: value } as DataPoint;
+                            const dp = { x: parseInt(el[0], 10), y: parseFloat(el[1]) } as DataPoint;
                             points.push(dp);
                         }
                     });
@@ -249,32 +237,10 @@ export default defineComponent({
                                 };
                                 //console.log(JSON.stringify(set.data));
                                 sets.push(set);
-
                             }
                         }
-                        console.log("done");
                     }
 
-                    /*if (data['data123'] !== undefined)
-                    {
-                        const serialList = Object.keys(data['data']);
-                        const valueList = Object.values(data['data']) as string[];
-
-                        for (let i = 0; i < serialList.length; i++) {
-                            const serial = serialList[i];
-                            const value = valueList[i];
-
-                            if(serial !== undefined && value !== undefined) {
-                                const obj = sets.find(el => (el.serial === serial)) as IDatasets;
-                                if (obj) {
-                                    obj.data = JSON.parse(value) as DataPoint[];
-                                    console.log(obj.data);
-                                }
-                            }
-                        }
-                        //console.log(this.configData);
-                    }*/
-                    //Object.assign(this.configData, sets);
                     this.configData = sets;
                 });
         },
