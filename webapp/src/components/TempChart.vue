@@ -161,20 +161,33 @@ export default defineComponent({
             let points: DataPoint[] = [];
             const now = new Date().getTime() / 1000;
 
+            const startOfDay = new Date();
+            startOfDay.setHours(0,0,0,0);
+
             return new Promise((resolve) => {
                 fetch('/api/livedata/graphdata?id=' + serial + '&start=' + (now-30*60) + '&length=' + (30*60), { headers: authHeader() })
                     .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
                     .then((data) => {
                         //console.log(data.slice(-100));
+                        const oldFormat = data.indexOf(':') > -1;
                         data.split('\n').forEach(line => {
                             const el = line.split(';')
-                            if(el[0] !== undefined && el[1] !== undefined)
-                            {
-                                const dp = { x: parseInt(el[0], 10), y: parseFloat(el[1]) } as DataPoint;
-                                points.push(dp);
-                                resolve(points);
+                            if(el[0] !== undefined && el[1] !== undefined) {
+                                if(oldFormat) {
+                                    const t = el[0].split(':');
+                                    if(t[0] !== undefined && t[1] !== undefined && t[2] !== undefined)
+                                    {
+                                        const ti = startOfDay.getTime()/1000 + parseInt(t[0], 10) * 3600 + parseInt(t[1], 10) * 60 + parseInt(t[2], 10);
+                                        const dp = { x: ti, y: parseFloat(el[1]) } as DataPoint;
+                                        points.push(dp);
+                                    }
+                                } else {
+                                    const dp = { x: parseInt(el[0], 10), y: parseFloat(el[1]) } as DataPoint;
+                                    points.push(dp);
+                                }
                             }
                         });
+                        resolve(points);
                     });
             });
         },

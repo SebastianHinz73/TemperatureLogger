@@ -24,7 +24,6 @@ public:
     static bool getTmTime(struct tm* info, time_t time, uint32_t ms);
 
     bool getTemperature(uint16_t serial, uint32_t& time, float& value);
-    bool getTemperatureFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
     bool getTemperatureFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
     bool valueChanged(uint16_t serial, uint32_t seconds);
 

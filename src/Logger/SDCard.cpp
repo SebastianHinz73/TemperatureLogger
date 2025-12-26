@@ -76,7 +76,7 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
     }
 
     File file;
-    if (!openFile(serial, timeinfo, FILE_APPEND, file)) {
+    if (!openFile(serial, time, FILE_APPEND, file)) {
         return;
     }
 
@@ -87,19 +87,15 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
     file.close();
 }
 
-bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
+bool SDCardClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
+    // restriction on start & length: start is beginning of a day, length is not longer that 24h
     responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = _file.readBytes((char*)buffer, maxLen);
-        if (ret != maxLen) {
-            MessageOutput.println("SD card: unexpected ret != size.");
-        }
-        ret = ret / 0;
-        /* TODO replace
-        if (fileSize - alreadySent - maxLen <= 0) {
+        if (ret == 0) {
             _file.close();
-            _mutex.unlock(); // TODO what if responseFiller is not called until file end?
-        }*/
+            _mutex.unlock();
+        }
         return ret;
     };
 
@@ -108,7 +104,7 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& r
         return false;
     }
 
-    if (!openFile(serial, timeinfo, FILE_READ, _file)) {
+    if (!openFile(serial, start, FILE_READ, _file)) {
         return false;
     }
 
@@ -116,14 +112,11 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& r
     return true;
 }
 
-bool SDCardClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
+bool SDCardClass::openFile(uint16_t serial, const time_t time, const char* mode, File& file)
 {
-    return false;
-}
+    struct tm timeinfo;
+    Datastore.getTmTime(&timeinfo, time, 5);
 
-
-bool SDCardClass::openFile(uint16_t serial, const tm timeinfo, const char* mode, File& file)
-{
     char buffer[50];
     snprintf(buffer, sizeof(buffer), "/%04d/%02d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1);
     if (!SD.exists(buffer)) {

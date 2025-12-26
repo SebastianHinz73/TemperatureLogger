@@ -4,8 +4,8 @@
  */
 #include "WebApi_iot_sensor_data.h"
 #include "Configuration.h"
-#include "Logger/DS18B20List.h"
 #include "Datastore.h"
+#include "Logger/DS18B20List.h"
 #include "MessageOutput.h"
 #include "NetworkSettings.h"
 #include "WebApi.h"
@@ -93,8 +93,9 @@ void WebApiIotSensorData::onFileApp(AsyncWebServerRequest* request)
     }
 
     static ResponseFiller responseFiller;
-    if (!Datastore.getTemperatureFile(serial, timeinfo, responseFiller)) {
+    if (!Datastore.getTemperatureFile(serial, mktime(&timeinfo), 24*60*60, responseFiller)) {
         MessageOutput.print("WebApiIotSensorData: Can not get file.\r\n");
+        request->send(404);
         return;
     }
 

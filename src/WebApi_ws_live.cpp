@@ -265,7 +265,8 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
 
         static ResponseFiller responseFiller;
         if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
-            MessageOutput.print("WebApiIotSensorData: Can not get file.\r\n");
+            MessageOutput.print("WebApi_ws_live: Can not get file.\r\n");
+            request->send(404);
             return;
         }
 
@@ -287,3 +288,4 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
         WebApi.sendTooManyRequests(request);
     }
 }
+

@@ -28,7 +28,6 @@ public:
 
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
-    virtual bool getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
     virtual bool getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
 
 private:

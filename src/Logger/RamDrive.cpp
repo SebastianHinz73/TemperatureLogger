@@ -66,41 +66,6 @@ void RamDriveClass::writeValue(uint16_t serial, time_t time, float value)
     _ramBuffer->writeValue(serial, time, value);
 }
 
-bool RamDriveClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
-{
-    _mutex.lock();
-
-    static dataEntry_t* act;
-    act = nullptr;
-    time_t start_of_day = getStartOfDay(timeinfo);
-
-    responseFiller = [&, serial, start_of_day](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-        size_t ret = 0;
-        size_t maxCnt = maxLen / ENTRY_TO_STRING_SIZE;
-
-        MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d, maxCnt:%d\r\n", maxLen, alreadySent, maxCnt);
-        for (size_t cnt = 0; cnt < maxCnt; cnt++) {
-            if (!_ramBuffer->getEntry(serial, start_of_day, act)) {
-                break;
-            }
-            int h = (act->time - start_of_day) / 3600;
-            int min = ((act->time - start_of_day) - h * 3600) / 60;
-            int sec = (act->time - start_of_day) - h * 3600 - min * 60;
-            snprintf((char*)&buffer[cnt * ENTRY_TO_STRING_SIZE], ENTRY_TO_STRING_SIZE, "%02d:%02d:%02d;%05.2f\n", h, min, sec, act->value);
-
-            buffer[(cnt + 1) * ENTRY_TO_STRING_SIZE - 1] = '\n';
-            ret += ENTRY_TO_STRING_SIZE;
-        }
-
-        if (ret == 0) {
-            _mutex.unlock();
-        }
-        return ret;
-    };
-
-    return true;
-}
-
 bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
     _mutex.lock();
@@ -111,15 +76,14 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
     responseFiller = [&, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
 
-        //MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", maxLen, alreadySent, start, length);
+        // MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", maxLen, alreadySent, start, length);
 
         const int EntrySize = 20; // typically entry count 17
-        while(maxLen - ret > EntrySize)
-        {
+        while (maxLen - ret > EntrySize) {
             if (!_ramBuffer->getEntry(serial, start, act)) {
                 break;
             }
-            if(act->time > start + length) {
+            if (act->time > start + length) {
                 break;
             }
             // e.g. 1766675463;19.12\n
