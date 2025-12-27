@@ -1,7 +1,12 @@
-export interface Temperature {
+export interface Config {
     serial: number;
     name: string;
     valid: boolean;
+}
+
+export interface Update {
+    serial: string;
+    value: number;
 }
 
 export interface Hints {
@@ -11,8 +16,9 @@ export interface Hints {
 }
 
 export interface LiveData {
-    temperatures: Temperature[];
+    config: Config[];
     updates: UpdateMap;
+    updates2: Update[];
     hints: Hints;
 }
 

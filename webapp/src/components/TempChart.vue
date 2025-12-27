@@ -1,13 +1,24 @@
 <template>
-    <div
-        class="row row-cols-1 row-cols-md-3 g-3">
-        <Scatter :data="chartData" :options="chartOptions" />
+    <div class="card">
+        <div class="card-header" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
+            Graph
+            <button type="button" class="btn btn-secondary" @click="SetTimescale(24)" >Today</button>
+            <button type="button" class="btn btn-secondary" @click="SetTimescale(0.5)" >30Minutes</button>
+            <button type="button" class="btn btn-secondary" @click="SetTimescale(1)" >1Hour</button>
+            <button type="button" class="btn btn-secondary" @click="SetTimescale(6)" >6Hours</button>
+        </div>
+        <div class="card-body card-text text-center">
+            <div
+                class="row row-cols-1 row-cols-md-3 g-3">
+                <Scatter :data="chartData" :options="chartOptions" />
+            </div>
+        </div>
     </div>
 </template>
 
 <script lang="ts">
-import type { UpdateMap } from '@/types/LiveDataStatus';
-import { authHeader, handleResponse, handleBinaryResponse } from '@/utils/authentication';
+import type { Config, UpdateMap } from '@/types/LiveDataStatus';
+import { authHeader, handleBinaryResponse } from '@/utils/authentication';
 import { defineComponent, type PropType } from 'vue';
 import CardElement from './CardElement.vue';
 
@@ -43,6 +54,7 @@ interface DataPoint {
 
 export default defineComponent({
     props: {
+        config: { type: Object as PropType<Config[]>, required: true },
         updates: { type: Object as PropType<UpdateMap>, required: true },
     },
     watch: {
@@ -86,6 +98,12 @@ export default defineComponent({
     },
     data() {
         return {
+
+            start: {} as Date,
+            length: 0 as number,
+
+            sensors: this.config,
+
             configData: [] as IDatasets[],
 
             chartOptions: {
@@ -119,7 +137,7 @@ export default defineComponent({
         };
     },
     created() {
-        this.fetchData();
+        this.SetTimescale(0.5);
     },
     unmounted() {
     },
@@ -159,13 +177,12 @@ export default defineComponent({
         },
         async fetchBinaryData(serial: string): Promise<DataPoint[]> {
             let points: DataPoint[] = [];
-            const now = new Date().getTime() / 1000;
 
             const startOfDay = new Date();
             startOfDay.setHours(0,0,0,0);
 
             return new Promise((resolve) => {
-                fetch('/api/livedata/graphdata?id=' + serial + '&start=' + (now-30*60) + '&length=' + (30*60), { headers: authHeader() })
+                fetch('/api/livedata/graphdata?id=' + serial + '&start=' + this.start.getTime() / 1000 + '&length=' + this.length, { headers: authHeader() })
                     .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
                     .then((data) => {
                         //console.log(data.slice(-100));
@@ -225,38 +242,63 @@ export default defineComponent({
                     g: Math.round(g * 255),
                     b: Math.round(b * 255)};
         },
-        fetchData() {
+        async fetchData() {
+            //console.log(this.sensors);
+            let sets: IDatasets[] = [];
 
-        //this.dataLoading = true;
-            fetch('/api/livedata/graph', { headers: authHeader() })
-                .then((response) => handleResponse(response, this.$emitter, this.$router, true))
-                .then(async (data) => {
-                    let sets: IDatasets[] = [];
-                    if (data['config'] !== undefined) {
-                        const serialList = Object.keys(data['config']);
-                        for (let i = 0; i < serialList.length; i++) {
-                            const serial = serialList[i];
-                            if(serial !== undefined) {
-                                const config = data['config'][serial];
-                                let set: IDatasets = {
-                                    serial: serial,
-                                    label: config.name,
-                                    fill: false,
-                                    borderColor: this.getColor(i, serialList.length),
-                                    backgroundColor: this.getColor(i, serialList.length),
-                                    showLine: true,
-                                    borderWidth: 2,
-                                    data: await this.fetchBinaryData(serial),
-                                };
-                                //console.log(JSON.stringify(set.data));
-                                sets.push(set);
-                            }
-                        }
-                    }
-                    this.configData = sets;
-                });
+            for (let i = 0; i < this.sensors.length; i++) {
+                const sensor = this.toConfigObject(this.sensors, i);
+                let set: IDatasets = {
+                    serial: sensor.serial.toString(16),
+                    label: sensor.name,
+                    fill: false,
+                    borderColor: this.getColor(i, this.sensors.length),
+                    backgroundColor: this.getColor(i, this.sensors.length),
+                    showLine: true,
+                    borderWidth: 2,
+                    data: await this.fetchBinaryData(sensor.serial.toString(16)),
+                };
+                sets.push(set);
+            }
+            this.configData = sets;
         },
+        SetTimescale(scale: number) {
 
+            const now = new Date();
+
+            switch (scale) {
+                case 24:
+                    now.setHours(0,0,0,0);
+                    this.start = now;
+                    this.length = 24*60*60;
+                    break;
+                default:
+                    this.length = scale*60*60;
+                    this.start = new Date(now.getTime() - this.length * 1000);
+                    break;
+            }
+
+            //console.log("SetTimescale " + scale);
+            this.fetchData();
+        },
+        toConfigObject(arr: Config[], index: number) : Config {
+            const obj = Object.values(arr).at(index);
+            if(obj !== undefined)
+            {
+                let set: Config = {
+                    serial: obj.serial,
+                    name: obj.name,
+                    valid: obj.valid,
+                };
+                return set;
+            }
+            let set: Config = {
+                    serial: 0,
+                    name: "",
+                    valid: false,
+                };
+            return set;
+        },
     },
  });
 </script>

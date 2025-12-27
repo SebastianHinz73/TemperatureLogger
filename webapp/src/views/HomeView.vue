@@ -8,8 +8,8 @@
         @reload="reloadData"
     >
         <HintView :hints="liveData.hints" />
-        <SensorInfo :updates="liveData.updates" :sensorData="liveData.temperatures" /><br />
-        <TempChart :updates="liveData.updates"/><br />
+        <SensorInfo :config="liveData.config" :updates="liveData.updates2"/><br />
+        <TempChart :config="liveData.config" :updates="liveData.updates"/><br />
     </BasePage>
 </template>
 
@@ -18,7 +18,7 @@ import BasePage from '@/components/BasePage.vue';
 import TempChart from '@/components/TempChart.vue';
 import HintView from '@/components/HintView.vue';
 import SensorInfo from '@/components/SensorInfo.vue';
-import type { Temperature, LiveData } from '@/types/LiveDataStatus';
+import type { LiveData } from '@/types/LiveDataStatus';
 import { authHeader, authUrl, handleResponse, isLoggedIn } from '@/utils/authentication';
 import { defineComponent } from 'vue';
 
@@ -60,11 +60,6 @@ export default defineComponent({
     updated() {
        //console.log('Updated');
     },
-    computed: {
-        sensorData(): Temperature[] {
-            return this.liveData.temperatures;
-        },
-    },
     methods: {
         isLoggedIn,
         getInitialData(triggerLoading: boolean = true) {
@@ -101,11 +96,11 @@ export default defineComponent({
                 //console.log(event);
                 if (event.data != '{}') {
                     const newData = JSON.parse(event.data);
-                    //console.log(newData);
+                    console.log(newData);
 
-                    Object.assign(this.liveData.temperatures, newData.temperatures);
+                    Object.assign(this.liveData.config, newData.config);
                     //Object.assign(this.liveData.updates, newData.updates);
-                   // Object.assign(this.liveData.updates2, newData.updates2);
+                    Object.assign(this.liveData.updates2, newData.updates2);
                     Object.assign(this.liveData.hints, newData.hints);
 
                     let m = new Map<string, number>();

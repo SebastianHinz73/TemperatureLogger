@@ -19,28 +19,6 @@ void WebApiTempLoggerClass::init(AsyncWebServer& server, Scheduler& scheduler)
     server.on("/api/templogger/config", HTTP_POST, std::bind(&WebApiTempLoggerClass::onTempLoggerAdminPost, this, _1));
 }
 
-void generateJsonResponse(JsonVariant& root)
-{
-    const CONFIG_T& config = Configuration.get();
-    auto tempArray = root["temperatures"].to<JsonArray>();
-
-    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
-        if (config.DS18B20.Sensors[i].Serial == 0) {
-            continue;
-        }
-        uint32_t time;
-        float value;
-        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
-
-        JsonObject tempObj = tempArray[i].to<JsonObject>();
-        tempObj["valid"] = valid;
-        tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
-        tempObj["name"] = config.DS18B20.Sensors[i].Name;
-        tempObj["time"] = valid ? time : 0;
-        tempObj["value"] = valid ? value : 0;
-    }
-}
-
 void WebApiTempLoggerClass::onTempLoggerAdminGet(AsyncWebServerRequest* request)
 {
     if (!WebApi.checkCredentials(request)) {

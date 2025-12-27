@@ -29,7 +29,6 @@ void WebApiWsLiveClass::init(AsyncWebServer& server, Scheduler& scheduler)
     using std::placeholders::_6;
 
     server.on("/api/livedata/status", HTTP_GET, std::bind(&WebApiWsLiveClass::onLivedataStatus, this, _1));
-    server.on("/api/livedata/graph", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphUpdate, this, _1));
     server.on("/api/livedata/graphdata", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphData, this, _1));
 
     server.addHandler(&_ws);
@@ -101,24 +100,6 @@ void WebApiWsLiveClass::sendDataTaskCb()
 
         generateJsonResponse(var);
 
-        const CONFIG_T& config = Configuration.get();
-        auto tempObject = root["updates"].to<JsonObject>();
-
-        for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
-            if (config.DS18B20.Sensors[i].Serial == 0) {
-                continue;
-            }
-            uint32_t time;
-            float value;
-            bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
-            if(!valid) {
-                continue;
-            }
-
-            String serial = String(config.DS18B20.Sensors[i].Serial, 16);
-            tempObject[serial] = value;
-        }
-
         String buffer;
         serializeJson(root, buffer);
 
@@ -134,7 +115,8 @@ void WebApiWsLiveClass::sendDataTaskCb()
 void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
 {
     const CONFIG_T& config = Configuration.get();
-    auto tempArray = root["temperatures"].to<JsonArray>();
+    auto tempArray = root["config"].to<JsonArray>();
+    auto tempArray2 = root["updates2"].to<JsonArray>();
 
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         if (config.DS18B20.Sensors[i].Serial == 0) {
@@ -148,6 +130,12 @@ void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
         tempObj["valid"] = valid;
         tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
         tempObj["name"] = config.DS18B20.Sensors[i].Name;
+
+        if(valid) {
+            tempObj = tempArray2[i].to<JsonObject>();
+            tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
+            tempObj["value"] = value;
+        }
     }
 
     JsonObject hintObj = root["hints"].to<JsonObject>();
@@ -155,6 +143,23 @@ void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
     hintObj["time_sync"] = !getLocalTime(&timeinfo, 5);
     hintObj["radio_problem"] = false;
     hintObj["default_password"] = strcmp(Configuration.get().Security.Password, ACCESS_POINT_PASSWORD) == 0;
+
+    ///
+    auto tempObject = root["updates"].to<JsonObject>();
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        if (config.DS18B20.Sensors[i].Serial == 0) {
+            continue;
+        }
+        uint32_t time;
+        float value;
+        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
+        if(!valid) {
+            continue;
+        }
+
+        String serial = String(config.DS18B20.Sensors[i].Serial, 16);
+        tempObject[serial] = value;
+    }
 }
 
 void WebApiWsLiveClass::onWebsocketEvent(AsyncWebSocket* server, AsyncWebSocketClient* client, AwsEventType type, void* arg, uint8_t* data, size_t len)
@@ -190,51 +195,6 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
     }
 }
 
-void WebApiWsLiveClass::generateGraphConfigResponse(JsonVariant& root)
-{
-    const CONFIG_T& config = Configuration.get();
-    auto tempArray = root["config"].to<JsonObject>();
-
-    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
-        if (config.DS18B20.Sensors[i].Serial == 0) {
-            continue;
-        }
-        uint32_t time;
-        float value;
-        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
-        if(!valid) {
-            continue;
-        }
-
-        String serial = String(config.DS18B20.Sensors[i].Serial, 16);
-        tempArray[serial]["name"] = config.DS18B20.Sensors[i].Name;
-    }
-}
-
-void WebApiWsLiveClass::onGraphUpdate(AsyncWebServerRequest* request)
-{
-    if (!WebApi.checkCredentialsReadonly(request)) {
-        return;
-    }
-
-    try {
-        std::lock_guard<std::mutex> lock(_mutex);
-
-        AsyncJsonResponse* response = new AsyncJsonResponse();
-        auto& root = response->getRoot();
-
-        generateGraphConfigResponse(root);
-
-        WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
-    } catch (const std::bad_alloc& bad_alloc) {
-        MessageOutput.printf("Call to /api/livedata/graph temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
-        WebApi.sendTooManyRequests(request);
-    } catch (const std::exception& exc) {
-        MessageOutput.printf("Unknown exception in /api/livedata/graph. Reason: \"%s\".\r\n", exc.what());
-        WebApi.sendTooManyRequests(request);
-    }
-}
-
 void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
 {
     if (!WebApi.checkCredentialsReadonly(request)) {
@@ -242,9 +202,7 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
     }
 
     try {
-        //std::lock_guard<std::mutex> lock(_mutex);
         _mutex.lock();
-
 
         tm timeinfo;
         if (!getLocalTime(&timeinfo, 5)) {
