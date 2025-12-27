@@ -17,9 +17,6 @@ export interface Hints {
 
 export interface LiveData {
     config: Config[];
-    updates: UpdateMap;
-    updates2: Update[];
+    updates: Update[];
     hints: Hints;
 }
-
-export type UpdateMap = Map<string, number>;

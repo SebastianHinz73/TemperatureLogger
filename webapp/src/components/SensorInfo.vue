@@ -34,12 +34,6 @@ export default defineComponent({
             {
                 return el.value;
             }
-            /*let el = Array.from(this.updates).find(row => row[0] == sensor.serial.toString())
-            if(el !== undefined)
-            {
-                return el[1];
-            }*/
-
             return 0;
         },
     },

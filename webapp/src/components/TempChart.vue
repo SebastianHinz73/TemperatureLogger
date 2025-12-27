@@ -17,7 +17,7 @@
 </template>
 
 <script lang="ts">
-import type { Config, UpdateMap } from '@/types/LiveDataStatus';
+import type { Config, Update } from '@/types/LiveDataStatus';
 import { authHeader, handleBinaryResponse } from '@/utils/authentication';
 import { defineComponent, type PropType } from 'vue';
 import CardElement from './CardElement.vue';
@@ -55,18 +55,15 @@ interface DataPoint {
 export default defineComponent({
     props: {
         config: { type: Object as PropType<Config[]>, required: true },
-        updates: { type: Object as PropType<UpdateMap>, required: true },
+        updates: { type: Object as PropType<Update[]>, required: true },
     },
     watch: {
         updates: {
-            handler(newVal: UpdateMap) { // receive updates from board on websocket
+            handler(newVal: Update[]) { // receive updates from board on websocket
                 //console.table(newVal);
 
                 const time = new Date();
                 const now = time.getTime() / 1000;
-
-                //const text = ("0" + time.getHours()).slice(-2) + ':' + ("0" + time.getMinutes()).slice(-2) + ':' + ("0" + time.getSeconds()).slice(-2);
-                //console.log(text);
 
                 const copyDataset: IDatasets[] = this.copyDataset(this.configData);
 
@@ -74,15 +71,13 @@ export default defineComponent({
                     const serial = this.configData[i]?.serial ?? '';
                     if(serial.length)
                     {
-                        const value = newVal.get(serial);
+                        const value = newVal.find(el => el.serial == serial)?.value;
                         if(value !== undefined)
                         {
                             let src = this.configData.find(el => (el.serial === serial));
                             let dst = copyDataset.find(el => (el.serial === serial));
                             if (src && dst) {
-                                //dst.data = [...src.data, ...JSON.parse(value) as DataPoint[]];
                                 dst.data = [...src.data,   { x: now, y: value } ] ;
-                                //dst.data = dst.data.slice(-15); // keep only last 500 data points
                             }
                         }
                     }
@@ -122,7 +117,7 @@ export default defineComponent({
                         ticks: {
                             callback: function (value: any) {
                                 const time = new Date(value*1000);
-                                const text = ("0" + time.getHours()).slice(-2) + ':' + ("0" + time.getMinutes()).slice(-2) + ':' + ("0" + time.getSeconds()).slice(-2);
+                                const text = ("0" + time.getHours()).slice(-2) + ':' + ("0" + time.getMinutes()).slice(-2);
                                 return text;
                             },
                         },

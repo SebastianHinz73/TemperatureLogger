@@ -8,7 +8,7 @@
         @reload="reloadData"
     >
         <HintView :hints="liveData.hints" />
-        <SensorInfo :config="liveData.config" :updates="liveData.updates2"/><br />
+        <SensorInfo :config="liveData.config" :updates="liveData.updates"/><br />
         <TempChart :config="liveData.config" :updates="liveData.updates"/><br />
     </BasePage>
 </template>
@@ -96,30 +96,11 @@ export default defineComponent({
                 //console.log(event);
                 if (event.data != '{}') {
                     const newData = JSON.parse(event.data);
-                    console.log(newData);
+                    //console.log(newData);
 
                     Object.assign(this.liveData.config, newData.config);
-                    //Object.assign(this.liveData.updates, newData.updates);
-                    Object.assign(this.liveData.updates2, newData.updates2);
+                    Object.assign(this.liveData.updates, newData.updates);
                     Object.assign(this.liveData.hints, newData.hints);
-
-                    let m = new Map<string, number>();
-
-                    const serialList = Object.keys(newData.updates);
-                    const valueList = Object.values(newData.updates) as number[];
-
-                    for (let i = 0; i < serialList.length; i++) {
-                        const serial = serialList[i];
-                        const value = valueList[i];
-
-                        if(serial !== undefined && value !== undefined) {
-                            m.set(serial, value);
-                        }
-                    }
-                    this.liveData.updates = m;
-                    //this.liveData.updates2 = newData.updates;
-
-                    //console.log(m);
 
                     this.dataLoading = false;
                     this.heartCheck(); // Reset heartbeat detection

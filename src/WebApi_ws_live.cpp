@@ -116,7 +116,7 @@ void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
 {
     const CONFIG_T& config = Configuration.get();
     auto tempArray = root["config"].to<JsonArray>();
-    auto tempArray2 = root["updates2"].to<JsonArray>();
+    auto tempArray2 = root["updates"].to<JsonArray>();
 
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         if (config.DS18B20.Sensors[i].Serial == 0) {
@@ -143,23 +143,6 @@ void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
     hintObj["time_sync"] = !getLocalTime(&timeinfo, 5);
     hintObj["radio_problem"] = false;
     hintObj["default_password"] = strcmp(Configuration.get().Security.Password, ACCESS_POINT_PASSWORD) == 0;
-
-    ///
-    auto tempObject = root["updates"].to<JsonObject>();
-    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
-        if (config.DS18B20.Sensors[i].Serial == 0) {
-            continue;
-        }
-        uint32_t time;
-        float value;
-        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
-        if(!valid) {
-            continue;
-        }
-
-        String serial = String(config.DS18B20.Sensors[i].Serial, 16);
-        tempObject[serial] = value;
-    }
 }
 
 void WebApiWsLiveClass::onWebsocketEvent(AsyncWebSocket* server, AsyncWebSocketClient* client, AwsEventType type, void* arg, uint8_t* data, size_t len)
