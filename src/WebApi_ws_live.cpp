@@ -115,9 +115,10 @@ void WebApiWsLiveClass::sendDataTaskCb()
 void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
 {
     const CONFIG_T& config = Configuration.get();
-    auto tempArray = root["config"].to<JsonArray>();
-    auto tempArray2 = root["updates"].to<JsonArray>();
+    auto arrayConfig = root["config"].to<JsonArray>();
+    auto arrayUpdates = root["updates"].to<JsonArray>();
 
+    int indexUpdates = 0;
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         if (config.DS18B20.Sensors[i].Serial == 0) {
             continue;
@@ -126,13 +127,13 @@ void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
         float value;
         bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
 
-        JsonObject tempObj = tempArray[i].to<JsonObject>();
+        JsonObject tempObj = arrayConfig[i].to<JsonObject>();
         tempObj["valid"] = valid;
         tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
         tempObj["name"] = config.DS18B20.Sensors[i].Name;
 
         if(valid) {
-            tempObj = tempArray2[i].to<JsonObject>();
+            tempObj = arrayUpdates[indexUpdates++].to<JsonObject>();
             tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
             tempObj["value"] = value;
         }
@@ -185,18 +186,16 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
     }
 
     try {
-        _mutex.lock();
-
         tm timeinfo;
         if (!getLocalTime(&timeinfo, 5)) {
             MessageOutput.printf("WebApiIotSensorData: getLocalTime failed. Ignore\r\n");
-            request->send(404);
+            request->send(200);
             return;
         }
 
         if (!request->hasParam("id") || !request->hasParam("start") || !request->hasParam("length")) {
             MessageOutput.printf("WebApiIotSensorData: Parameter id, start or length missing\r\n");
-            request->send(404);
+            request->send(200);
             return;
         }
 
@@ -204,10 +203,13 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
         time_t start = request->getParam("start")->value().toInt();
         uint32_t length = request->getParam("length")->value().toInt();
 
+        _mutex.lock();
+
         static ResponseFiller responseFiller;
         if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
             MessageOutput.print("WebApi_ws_live: Can not get file.\r\n");
-            request->send(404);
+            _mutex.unlock();
+            request->send(200);
             return;
         }
 
