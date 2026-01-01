@@ -203,20 +203,20 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
         time_t start = request->getParam("start")->value().toInt();
         uint32_t length = request->getParam("length")->value().toInt();
 
-        _mutex.lock();
+        _mutexGraphData.lock();
 
         static ResponseFiller responseFiller;
         if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
             MessageOutput.print("WebApi_ws_live: Can not get file.\r\n");
-            _mutex.unlock();
             request->send(200);
+            _mutexGraphData.unlock();
             return;
         }
 
         AsyncWebServerResponse* response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
             int send = responseFiller(buffer, maxLen, alreadySent);
             if(send == 0) {
-                _mutex.unlock();
+                _mutexGraphData.unlock();
             }
             return send;
         });
@@ -226,9 +226,11 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
     } catch (const std::bad_alloc& bad_alloc) {
         MessageOutput.printf("Call to /api/livedata/graph temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
         WebApi.sendTooManyRequests(request);
+        _mutexGraphData.unlock();
     } catch (const std::exception& exc) {
         MessageOutput.printf("Unknown exception in /api/livedata/graph. Reason: \"%s\".\r\n", exc.what());
         WebApi.sendTooManyRequests(request);
+        _mutexGraphData.unlock();
     }
 }
 

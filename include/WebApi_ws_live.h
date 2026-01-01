@@ -25,6 +25,7 @@ private:
 
     unsigned long _lastPublishStats = 0;
     std::mutex _mutex;
+    std::mutex _mutexGraphData;
 
     Task _wsCleanupTask;
     void wsCleanupTaskCb();
