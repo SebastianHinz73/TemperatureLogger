@@ -1,11 +1,24 @@
 <template>
     <div class="card">
         <div class="card-header" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
-            Graph
-            <button type="button" class="btn btn-secondary" @click="SetTimescale(24)" >Today</button>
-            <button type="button" class="btn btn-secondary" @click="SetTimescale(0.5)" >30Minutes</button>
-            <button type="button" class="btn btn-secondary" @click="SetTimescale(1)" >1Hour</button>
-            <button type="button" class="btn btn-secondary" @click="SetTimescale(6)" >6Hours</button>
+            <div class="justify-content-center align-self-center">
+                Date: <input ref="startDate" class="form-control-sm ms-2" type="date" />
+            </div>
+        </div>
+        <div class="text-left">
+            <div class="btn-group ms-1" role="group" aria-label="Basic radio toggle button group">
+                <input ref="duration30" type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" :checked="IsTimescale(0.5)" :disabled="IsDisabled()" @click="SetTimescale(0.5)">
+                <label class="btn btn-outline-success" for="btnradio1">30min</label>
+
+                <input ref="duration1" type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" :checked="IsTimescale(1)" :disabled="IsDisabled()" @click="SetTimescale(1)">
+                <label class="btn btn-outline-success" for="btnradio2">1h</label>
+
+                <input ref="duration6" type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" :checked="IsTimescale(6)" :disabled="IsDisabled()" @click="SetTimescale(6)">
+                <label class="btn btn-outline-success" for="btnradio3">6h</label>
+
+                <input ref="duration24" type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" :checked="IsTimescale(24)" :disabled="IsDisabled()" @click="SetTimescale(24)">
+                <label class="btn btn-outline-success" for="btnradio4">24h</label>
+            </div>
         </div>
         <div class="card-body card-text text-center">
             <div
@@ -14,6 +27,7 @@
             </div>
         </div>
     </div>
+
 </template>
 
 <script lang="ts">
@@ -93,6 +107,7 @@ export default defineComponent({
     },
     data() {
         return {
+            dataLoading: false,
 
             start: {} as Date,
             length: 0 as number,
@@ -128,11 +143,43 @@ export default defineComponent({
                         display: true,
                     },
                 },
+/*                tooltips: {
+                    usePointStyle: true,
+                    callbacks: {
+                        labelPointStyle: function(context) {
+                            return {
+                                pointStyle: 'triangle',
+                                rotation: 0
+                            };
+                        }
+                    },
+                },*/
             },
         };
     },
+    // https://medium.com/risan/vue-chart-component-with-chart-js-db85a2d21288
+    // https://www.chartjs.org/docs/latest/configuration/tooltip.html#label-callback
     created() {
         this.SetTimescale(0.5);
+    },
+    mounted() {
+        let datepicker = this.$refs.startDate as HTMLInputElement
+        datepicker.addEventListener('change',(e: any)=>{
+            //console.log(e.target.value);
+            const el = e.target.value.split('-');
+            var now = new Date(el[0], el[1]-1, el[2], 0, 0, 0, 0);
+            //console.log(now.getTime() / 1000);
+            this.start = now;
+            this.length = 24*60*60;
+            this.fetchData();
+
+            //const now = new Date();
+            //now.setHours(0,0,0,0);
+            //this.start = now;
+        })
+
+        const today = new Date();
+        datepicker.value = today.toISOString().slice(0, 10);
     },
     unmounted() {
     },
@@ -199,6 +246,7 @@ export default defineComponent({
                                 }
                             }
                         });
+                        this.dataLoading = false;
                         resolve(points);
                     });
             });
@@ -240,9 +288,14 @@ export default defineComponent({
         async fetchData() {
             //console.log(this.sensors);
             let sets: IDatasets[] = [];
-
             for (let i = 0; i < this.sensors.length; i++) {
                 const sensor = this.toConfigObject(this.sensors, i);
+                if(!sensor.valid) {
+                    continue;
+                }
+
+                this.dataLoading = true;
+
                 let set: IDatasets = {
                     serial: sensor.serial.toString(16),
                     label: sensor.name,
@@ -258,9 +311,7 @@ export default defineComponent({
             this.configData = sets;
         },
         SetTimescale(scale: number) {
-
             const now = new Date();
-
             switch (scale) {
                 case 24:
                     now.setHours(0,0,0,0);
@@ -272,9 +323,26 @@ export default defineComponent({
                     this.start = new Date(now.getTime() - this.length * 1000);
                     break;
             }
-
-            //console.log("SetTimescale " + scale);
             this.fetchData();
+        },
+        IsTimescale(scale: number) {
+            if(scale*60*60 == this.length) {
+                return true;
+            }
+            return false;
+        },
+        IsDisabled() {
+            if(this.dataLoading){
+                return true;
+            }
+            var now = new Date();
+            if(now.getFullYear() == this.start.getFullYear() &&
+                now.getMonth() == this.start.getMonth() &&
+                now.getDay() == this.start.getDay())
+            {
+                return false;
+            }
+            return true;
         },
         toConfigObject(arr: Config[], index: number) : Config {
             const obj = Object.values(arr).at(index);
