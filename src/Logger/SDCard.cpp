@@ -69,19 +69,14 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
         MessageOutput.printf("SD card: writeValue invalid state. %d\r\n", _state);
         return;
     }
-    tm timeinfo;
-    if (!Datastore.getTmTime(&timeinfo, time, 5)) {
-        MessageOutput.println("SD card: Get timeinfo failed.");
-        return;
-    }
 
     File file;
     if (!openFile(serial, time, FILE_APPEND, file)) {
         return;
     }
 
-    // write "hh:mm:ss;Temperature"
-    if (!file.printf("%02d:%02d:%02d;%.2f\n", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, value)) {
+    // write "time_t;Temperature"
+    if (!file.printf("%ld;%.2f\n", time, value)) {
         MessageOutput.println("SD card: Append failed");
     }
     file.close();
