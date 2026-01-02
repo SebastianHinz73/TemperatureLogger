@@ -228,7 +228,7 @@ export default defineComponent({
             const found = this.tempLoggerConfigList.sensors.find((element) => element.serial === this.selectedSensorData.serial);
             if (found !== undefined) {
                 const index = this.tempLoggerConfigList.sensors.indexOf(found);
-                if (index > -1) { // only splice array when item is found
+                if (index > -1 && this.tempLoggerConfigList.sensors[index] !== undefined) { // only splice array when item is found
                     this.tempLoggerConfigList.sensors[index].name = this.selectedSensorData.name;
                 }
             }

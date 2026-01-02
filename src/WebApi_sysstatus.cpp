@@ -50,6 +50,7 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
 
     root["ramdrive_total"] = pRamDrive != nullptr ? pRamDrive->getSizeBytes() : 0;
     root["ramdrive_used"] = pRamDrive != nullptr ? pRamDrive->getUsedBytes() : 0;
+    root["ramdrive_oldest"] = pRamDrive != nullptr ? pRamDrive->getOldestTime() : 0;
 
     root["chiprevision"] = ESP.getChipRevision();
     root["chipmodel"] = ESP.getChipModel();

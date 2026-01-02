@@ -25,14 +25,13 @@ public:
 
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
-    virtual bool getFileSize(uint16_t serial, const tm& timeinfo, size_t& size);
-    virtual bool getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller);
+    virtual bool getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
 
 private:
     void loop();
 
     void scanCard();
-    bool openFile(uint16_t serial, const tm timeinfo, const char* mode, File& file);
+    bool openFile(uint16_t serial, const time_t time, const char* mode, File& file);
 
 private:
     Task _loopTask;

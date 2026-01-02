@@ -69,54 +69,27 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
         MessageOutput.printf("SD card: writeValue invalid state. %d\r\n", _state);
         return;
     }
-    tm timeinfo;
-    if (!Datastore.getTmTime(&timeinfo, time, 5)) {
-        MessageOutput.println("SD card: Get timeinfo failed.");
-        return;
-    }
 
     File file;
-    if (!openFile(serial, timeinfo, FILE_APPEND, file)) {
+    if (!openFile(serial, time, FILE_APPEND, file)) {
         return;
     }
 
-    // write "hh:mm:ss;Temperature"
-    if (!file.printf("%02d:%02d:%02d;%.2f\n", timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec, value)) {
+    // write "time_t;Temperature"
+    if (!file.printf("%ld;%.2f\n", time, value)) {
         MessageOutput.println("SD card: Append failed");
     }
     file.close();
 }
 
-bool SDCardClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
+bool SDCardClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
-
-    if (_state != SDCardState_t::InitOk) {
-        MessageOutput.println("SD card: getFileSize invalid state.");
-        return false;
-    }
-
-    File file;
-    if (!openFile(serial, timeinfo, FILE_READ, file)) {
-        return false;
-    }
-
-    size = file.size();
-    file.close();
-
-    return true;
-}
-
-bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
-{
-    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize) -> size_t {
+    // restriction on start & length: start is beginning of a day, length is not longer that 24h
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = _file.readBytes((char*)buffer, maxLen);
-        if (ret != maxLen) {
-            MessageOutput.println("SD card: unexpected ret != size.");
-        }
-        if (fileSize - alreadySent - maxLen <= 0) {
+        if (ret == 0) {
             _file.close();
-            _mutex.unlock(); // TODO what if responseFiller is not called until file end?
+            _mutex.unlock();
         }
         return ret;
     };
@@ -126,7 +99,7 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& r
         return false;
     }
 
-    if (!openFile(serial, timeinfo, FILE_READ, _file)) {
+    if (!openFile(serial, start, FILE_READ, _file)) {
         return false;
     }
 
@@ -134,8 +107,11 @@ bool SDCardClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& r
     return true;
 }
 
-bool SDCardClass::openFile(uint16_t serial, const tm timeinfo, const char* mode, File& file)
+bool SDCardClass::openFile(uint16_t serial, const time_t time, const char* mode, File& file)
 {
+    struct tm timeinfo;
+    Datastore.getTmTime(&timeinfo, time, 5);
+
     char buffer[50];
     snprintf(buffer, sizeof(buffer), "/%04d/%02d", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1);
     if (!SD.exists(buffer)) {

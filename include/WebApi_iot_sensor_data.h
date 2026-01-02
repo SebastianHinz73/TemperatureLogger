@@ -11,4 +11,7 @@ public:
 private:
     void onConfig(AsyncWebServerRequest* request);
     void onFile(AsyncWebServerRequest* request);
+
+private:
+    std::mutex _mutex;
 };

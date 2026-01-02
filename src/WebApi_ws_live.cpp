@@ -9,6 +9,8 @@
 #include "WebApi.h"
 #include "defaults.h"
 #include <AsyncJson.h>
+#include "mbedtls/base64.h"
+
 
 WebApiWsLiveClass::WebApiWsLiveClass()
     : _ws("/livedata")
@@ -27,6 +29,7 @@ void WebApiWsLiveClass::init(AsyncWebServer& server, Scheduler& scheduler)
     using std::placeholders::_6;
 
     server.on("/api/livedata/status", HTTP_GET, std::bind(&WebApiWsLiveClass::onLivedataStatus, this, _1));
+    server.on("/api/livedata/graphdata", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphData, this, _1));
 
     server.addHandler(&_ws);
     _ws.onEvent(std::bind(&WebApiWsLiveClass::onWebsocketEvent, this, _1, _2, _3, _4, _5, _6));
@@ -78,13 +81,15 @@ void WebApiWsLiveClass::sendDataTaskCb()
         if (!Datastore.validSensor(config.DS18B20.Sensors[i].Serial)) {
             continue;
         }
-        bValueChanged |= Datastore.valueChanged(config.DS18B20.Sensors[i].Serial);
+        bValueChanged |= Datastore.valueChanged(config.DS18B20.Sensors[i].Serial, 5);
     }
+    bool bForce = millis() - _lastPublishStats > (5/*60*/ * 1000);
 
     // Update at least after 60 seconds
-    if (!(bValueChanged || millis() - _lastPublishStats > (60 * 1000))) {
+    if (!(bValueChanged || bForce)) {
         return;
     }
+    //MessageOutput.printf("bValueChanged %d , %d\r\n", bValueChanged, millis() - _lastPublishStats);
 
     _lastPublishStats = millis();
 
@@ -94,10 +99,6 @@ void WebApiWsLiveClass::sendDataTaskCb()
         JsonVariant var = root;
 
         generateJsonResponse(var);
-
-        if (!Utils::checkJsonAlloc(root, __FUNCTION__, __LINE__)) {
-            return;
-        }
 
         String buffer;
         serializeJson(root, buffer);
@@ -114,8 +115,10 @@ void WebApiWsLiveClass::sendDataTaskCb()
 void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
 {
     const CONFIG_T& config = Configuration.get();
-    auto tempArray = root["temperatures"].to<JsonArray>();
+    auto arrayConfig = root["config"].to<JsonArray>();
+    auto arrayUpdates = root["updates"].to<JsonArray>();
 
+    int indexUpdates = 0;
     for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
         if (config.DS18B20.Sensors[i].Serial == 0) {
             continue;
@@ -124,12 +127,16 @@ void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
         float value;
         bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
 
-        JsonObject tempObj = tempArray[i].to<JsonObject>();
+        JsonObject tempObj = arrayConfig[i].to<JsonObject>();
         tempObj["valid"] = valid;
         tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
         tempObj["name"] = config.DS18B20.Sensors[i].Name;
-        tempObj["time"] = valid ? time : 0;
-        tempObj["value"] = valid ? value : 0;
+
+        if(valid) {
+            tempObj = arrayUpdates[indexUpdates++].to<JsonObject>();
+            tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
+            tempObj["value"] = value;
+        }
     }
 
     JsonObject hintObj = root["hints"].to<JsonObject>();
@@ -171,3 +178,59 @@ void WebApiWsLiveClass::onLivedataStatus(AsyncWebServerRequest* request)
         WebApi.sendTooManyRequests(request);
     }
 }
+
+void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
+{
+    if (!WebApi.checkCredentialsReadonly(request)) {
+        return;
+    }
+
+    try {
+        tm timeinfo;
+        if (!getLocalTime(&timeinfo, 5)) {
+            MessageOutput.printf("WebApiIotSensorData: getLocalTime failed. Ignore\r\n");
+            request->send(200);
+            return;
+        }
+
+        if (!request->hasParam("id") || !request->hasParam("start") || !request->hasParam("length")) {
+            MessageOutput.printf("WebApiIotSensorData: Parameter id, start or length missing\r\n");
+            request->send(200);
+            return;
+        }
+
+        uint16_t serial = strtol(request->getParam("id")->value().c_str(), 0, 16);
+        time_t start = request->getParam("start")->value().toInt();
+        uint32_t length = request->getParam("length")->value().toInt();
+
+        _mutexGraphData.lock();
+
+        static ResponseFiller responseFiller;
+        if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
+            MessageOutput.print("WebApi_ws_live: Can not get file.\r\n");
+            request->send(200);
+            _mutexGraphData.unlock();
+            return;
+        }
+
+        AsyncWebServerResponse* response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+            int send = responseFiller(buffer, maxLen, alreadySent);
+            if(send == 0) {
+                _mutexGraphData.unlock();
+            }
+            return send;
+        });
+
+        response->addHeader("Server", "ESP Async Web Server");
+        request->send(response);
+    } catch (const std::bad_alloc& bad_alloc) {
+        MessageOutput.printf("Call to /api/livedata/graph temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
+        WebApi.sendTooManyRequests(request);
+        _mutexGraphData.unlock();
+    } catch (const std::exception& exc) {
+        MessageOutput.printf("Unknown exception in /api/livedata/graph. Reason: \"%s\".\r\n", exc.what());
+        WebApi.sendTooManyRequests(request);
+        _mutexGraphData.unlock();
+    }
+}
+

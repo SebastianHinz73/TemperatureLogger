@@ -66,38 +66,31 @@ void RamDriveClass::writeValue(uint16_t serial, time_t time, float value)
     _ramBuffer->writeValue(serial, time, value);
 }
 
-bool RamDriveClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    size = 0;
-
-    return true;
-}
-
-bool RamDriveClass::getFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
+bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
     _mutex.lock();
 
     static dataEntry_t* act;
     act = nullptr;
-    time_t start_of_day = getStartOfDay(timeinfo);
 
-    responseFiller = [&, serial, start_of_day](uint8_t* buffer, size_t maxLen, size_t alreadySent, size_t fileSize) -> size_t {
+    responseFiller = [&, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
-        size_t maxCnt = maxLen / ENTRY_TO_STRING_SIZE;
 
-        // MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d, fileSize:%d, maxCnt:%d\r\n", maxLen, alreadySent, fileSize, maxCnt);
-        for (size_t cnt = 0; cnt < maxCnt; cnt++) {
-            if (!_ramBuffer->getEntry(serial, start_of_day, act)) {
+        //MessageOutput.printf("RamDriveClass::getFile 0x%X responseFiller maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
+        const int EntrySize = 20; // typically entry count 17
+        while (maxLen - ret > EntrySize) {
+            if (!_ramBuffer->getEntry(serial, start, act)) {
                 break;
             }
-            int h = (act->time - start_of_day) / 3600;
-            int min = ((act->time - start_of_day) - h * 3600) / 60;
-            int sec = (act->time - start_of_day) - h * 3600 - min * 60;
-            snprintf((char*)&buffer[cnt * ENTRY_TO_STRING_SIZE], ENTRY_TO_STRING_SIZE, "%02d:%02d:%02d;%05.2f\n", h, min, sec, act->value);
+            if (act->time > start + length) {
+                _mutex.unlock();
+                break;
+            }
+            // e.g. 1766675463;19.12\n
+            int written = snprintf((char*)&buffer[ret], EntrySize, "%ld;%.2f\n", act->time, act->value);
+            buffer[written - 1] = '\n';
 
-            buffer[(cnt + 1) * ENTRY_TO_STRING_SIZE - 1] = '\n';
-            ret += ENTRY_TO_STRING_SIZE;
+            ret += written;
         }
 
         if (ret == 0) {

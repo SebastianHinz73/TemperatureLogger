@@ -68,13 +68,13 @@ bool DatastoreClass::getTemperature(uint16_t serial, uint32_t& time, float& valu
     return false;
 }
 
-bool DatastoreClass::valueChanged(uint16_t serial)
+bool DatastoreClass::valueChanged(uint16_t serial, uint32_t seconds)
 {
     std::lock_guard<std::mutex> lock(_mutex);
 
     for (const auto& entry : _list) {
         if (entry->Serial() == serial) {
-            return entry->valueChanged();
+            return entry->valueChanged(seconds);
         }
     }
     return false;
@@ -93,20 +93,11 @@ bool DatastoreClass::getTmTime(struct tm* info, time_t time, uint32_t ms)
     return false;
 }
 
-bool DatastoreClass::getFileSize(uint16_t serial, const tm& timeinfo, size_t& size)
+bool DatastoreClass::getTemperatureFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
     std::lock_guard<std::mutex> lock(_mutex);
     if (_device == nullptr)
         return false;
 
-    return _device->getFileSize(serial, timeinfo, size);
-}
-
-bool DatastoreClass::getTemperatureFile(uint16_t serial, const tm& timeinfo, ResponseFiller& responseFiller)
-{
-    std::lock_guard<std::mutex> lock(_mutex);
-    if (_device == nullptr)
-        return false;
-
-    return _device->getFile(serial, timeinfo, responseFiller);
+    return _device->getFile(serial, start, length, responseFiller);
 }

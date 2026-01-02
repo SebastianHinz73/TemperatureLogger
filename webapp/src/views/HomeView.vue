@@ -8,15 +8,17 @@
         @reload="reloadData"
     >
         <HintView :hints="liveData.hints" />
-        <SensorInfo :sensorData="liveData.temperatures" /><br />
+        <SensorInfo :config="liveData.config" :updates="liveData.updates"/><br />
+        <TempChart :config="liveData.config" :updates="liveData.updates"/><br />
     </BasePage>
 </template>
 
 <script lang="ts">
 import BasePage from '@/components/BasePage.vue';
+import TempChart from '@/components/TempChart.vue';
 import HintView from '@/components/HintView.vue';
 import SensorInfo from '@/components/SensorInfo.vue';
-import type { Temperature, LiveData } from '@/types/LiveDataStatus';
+import type { LiveData } from '@/types/LiveDataStatus';
 import { authHeader, authUrl, handleResponse, isLoggedIn } from '@/utils/authentication';
 import { defineComponent } from 'vue';
 
@@ -24,11 +26,12 @@ export default defineComponent({
     components: {
         BasePage,
         HintView,
+        TempChart,
         SensorInfo,
     },
     data() {
         return {
-            isLogged: this.isLoggedIn(),
+            isLogged: isLoggedIn(),
 
             socket: {} as WebSocket,
             heartInterval: 0,
@@ -55,12 +58,7 @@ export default defineComponent({
         this.closeSocket();
     },
     updated() {
-        console.log('Updated');
-    },
-    computed: {
-        sensorData(): Temperature[] {
-            return this.liveData.temperatures;
-        },
+       //console.log('Updated');
     },
     methods: {
         isLoggedIn,
@@ -95,11 +93,13 @@ export default defineComponent({
             this.socket = new WebSocket(webSocketUrl);
 
             this.socket.onmessage = (event) => {
-                console.log(event);
+                //console.log(event);
                 if (event.data != '{}') {
                     const newData = JSON.parse(event.data);
+                    //console.log(newData);
 
-                    Object.assign(this.liveData.temperatures, newData.temperatures);
+                    Object.assign(this.liveData.config, newData.config);
+                    Object.assign(this.liveData.updates, newData.updates);
                     Object.assign(this.liveData.hints, newData.hints);
 
                     this.dataLoading = false;
