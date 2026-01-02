@@ -29,7 +29,7 @@ The DS18B20 sensors are recognized automatically. It is possible to change the n
 
 **Next Features**
 
-- Export and import the data
+- Export and import of the data
 - Improve / bugfix data store in PSRam, maybe with error correction
 - Improve the graphical view
 
