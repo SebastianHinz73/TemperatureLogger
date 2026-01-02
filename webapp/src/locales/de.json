@@ -228,7 +228,8 @@
         "TotalFree": "Insgesamt frei",
         "LargestFreeBlock": "Größter zusammenhängender freier Block",
         "MaxUsage": "Maximale Speichernutzung seit Start",
-        "Fragmentation": "Grad der Fragmentierung"
+        "Fragmentation": "Grad der Fragmentierung",
+        "RamDriveStart": "Ram Drive Startdatum"
     },
     "taskdetails": {
         "TaskDetails": "Detailinformationen zu Tasks",

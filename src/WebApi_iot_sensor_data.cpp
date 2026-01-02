@@ -51,7 +51,9 @@ void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
             uint32_t time = 0;
             float value = 0;
             bool bValid = Datastore.getTemperature(serial, time, value);
-
+            if(!bValid) {
+                continue;
+            }
             // "1;C717;44.37;WWLVL;7;0;0;977\n";
             snprintf(buffer, sizeof(buffer), "1;%04X;%.2f;%s;-1;-1;-1;-1\n", serial, bValid ? value : 0, config.DS18B20.Sensors[i].Name);
             text += buffer;

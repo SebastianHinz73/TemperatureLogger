@@ -25,6 +25,10 @@
                             }})
                         </td>
                     </tr>
+                    <tr>
+                        <th>{{ $t('heapdetails.RamDriveStart') }}</th>
+                        <td>{{ getOldestRamdrive() }}</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
@@ -55,6 +59,19 @@ export default defineComponent({
         },
         getFragmentation() {
             return 1 - this.systemStatus.heap_max_block / this.getFreeHeap();
+        },
+        getOldestRamdrive() {
+            if(this.systemStatus.ramdrive_oldest == 0) {
+                return "n.a.";
+            }
+            const oldest = new Date(0);
+            oldest.setUTCSeconds(this.systemStatus.ramdrive_oldest);
+            const str = oldest.toString();
+            const arr = str.split("GMT");
+            if(arr.length == 2) {
+                return arr[0]?? "";
+            }
+            return str;
         },
     },
 });

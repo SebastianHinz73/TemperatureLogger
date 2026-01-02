@@ -42,6 +42,7 @@ export interface SystemStatus {
     ramdrive_used: number;
     sketch_total: number;
     sketch_used: number;
+    ramdrive_oldest: number;
     // RadioInfo
     nrf_configured: boolean;
     nrf_connected: boolean;

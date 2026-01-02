@@ -76,6 +76,10 @@ export default defineComponent({
             handler(newVal: Update[]) { // receive updates from board on websocket
                 //console.table(newVal);
 
+                if(!this.IsTodaySelected()) {
+                    return;
+                }
+
                 const time = new Date();
                 const now = time.getTime() / 1000;
 
@@ -165,17 +169,12 @@ export default defineComponent({
     mounted() {
         let datepicker = this.$refs.startDate as HTMLInputElement
         datepicker.addEventListener('change',(e: any)=>{
-            //console.log(e.target.value);
             const el = e.target.value.split('-');
             var now = new Date(el[0], el[1]-1, el[2], 0, 0, 0, 0);
             //console.log(now.getTime() / 1000);
             this.start = now;
             this.length = 24*60*60;
             this.fetchData();
-
-            //const now = new Date();
-            //now.setHours(0,0,0,0);
-            //this.start = now;
         })
 
         const today = new Date();
@@ -185,14 +184,11 @@ export default defineComponent({
     },
     computed: {
         chartData: function () {
-
             if(!this.configData.length){
                 return {
                     datasets: []
                 };
             }
-            //console.log('Chart data computed ' + JSON.stringify(this.configData));
-            //this.$forceUpdate();
             return { datasets: this.configData };
         },
     },
@@ -335,14 +331,20 @@ export default defineComponent({
             if(this.dataLoading){
                 return true;
             }
+            if(this.IsTodaySelected()) {
+                return false;
+            }
+            return true;
+        },
+        IsTodaySelected() {
             var now = new Date();
             if(now.getFullYear() == this.start.getFullYear() &&
                 now.getMonth() == this.start.getMonth() &&
                 now.getDay() == this.start.getDay())
             {
-                return false;
+                return true;
             }
-            return true;
+            return false;
         },
         toConfigObject(arr: Config[], index: number) : Config {
             const obj = Object.values(arr).at(index);
