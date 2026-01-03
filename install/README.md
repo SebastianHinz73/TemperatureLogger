@@ -7,7 +7,8 @@ Flash.cmd can be used for a completely new installation. The pin mapping must th
 ## Installation with flash.cmd
 
 1. Download and extract the zip file
-2. Install driver for the board [https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads)
+2. Install driver for the board UART bridge (CP210x) if neccessary. [https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads](https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers?tab=downloads)
+   (Remark: For my ESP32 boards its needed, not needed for my ESP32-S3 boards.)
 
 ![DeviceManager](../docs/pics/device-manager.png)
 3. Run flash.cmd
