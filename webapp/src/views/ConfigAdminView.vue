@@ -24,11 +24,11 @@
                             <td>{{ file.name }}</td>
                             <td>{{ $n(file.size, 'byte') }}</td>
                             <td>
-                                <a href="#" class="icon text-danger" :title="$t('fileadmin.Delete')">
+                                <a href="#" v-if="!file.data_backup" class="icon text-danger" :title="$t('fileadmin.Delete')">
                                     <BIconTrash v-on:click="onOpenModal(modalDelete, file)" /> </a
                                 >&nbsp;
                                 <a href="#" class="icon" :title="$t('fileadmin.Download')">
-                                    <BIconDownload v-on:click="downloadFile(file.name)" />
+                                    <BIconDownload v-on:click="!file.data_backup ? downloadFile(file.name) : downloadRamDrive(file.name)" />
                                 </a>
                             </td>
                         </tr>
@@ -221,6 +221,20 @@ export default defineComponent({
         },
         downloadFile(filename: string) {
             fetch('/api/file/get?file=' + filename, { headers: authHeader() })
+                .then((res) => res.blob())
+                .then((blob) => {
+                    const file = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = file;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                });
+        },
+        downloadRamDrive(filename: string) {
+            console.log('Downloading RAM Drive: ');
+            fetch('/api/livedata/graphdata?backup', { headers: authHeader() })
                 .then((res) => res.blob())
                 .then((blob) => {
                     const file = window.URL.createObjectURL(blob);

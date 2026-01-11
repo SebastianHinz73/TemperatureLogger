@@ -10,7 +10,8 @@
 
 ////////////////////////
 #define ENTRY_TO_STRING_SIZE 15
-
+#define RAMDRIVE_FILENAME "ramdrive.txt"
+////////////////////////
 class RamDriveClass : public IDataStoreDevice {
 public:
     RamDriveClass();
@@ -25,10 +26,12 @@ public:
     size_t getSizeBytes() const { return _ramBuffer->getTotalElements() * sizeof(dataEntry_t); }
     size_t getUsedBytes() const { return _ramBuffer->getUsedElements() * sizeof(dataEntry_t); }
     time_t getOldestTime() const { return _ramBuffer->getOldestTime(); }
+    time_t getNewestTime() const { return _ramBuffer->getNewestTime(); }
 
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
     virtual bool getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
+    virtual bool getBackup(ResponseFiller& responseFiller);
 
 private:
     time_t getStartOfDay(const tm& timeinfo);

@@ -73,10 +73,10 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
     static dataEntry_t* act;
     act = nullptr;
 
-    responseFiller = [&, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+        responseFiller = [&, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
 
-        //MessageOutput.printf("RamDriveClass::getFile 0x%X responseFiller maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
+        MessageOutput.printf("RamDriveClass::getFile 0x%X responseFiller maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
         const int EntrySize = 20; // typically entry count 17
         while (maxLen - ret > EntrySize) {
             if (!_ramBuffer->getEntry(serial, start, act)) {
@@ -98,7 +98,37 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
         }
         return ret;
     };
+    return true;
+}
 
+bool RamDriveClass::getBackup(ResponseFiller& responseFiller)
+{
+    _mutex.lock();
+
+    static dataEntry_t* act;
+    act = nullptr;
+
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+        size_t ret = 0;
+
+        MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d\r\n", maxLen, alreadySent);
+        const int EntrySize = 25; // typically entry count 22
+        while (maxLen - ret > EntrySize) {
+            if (!_ramBuffer->backupEntry(act)) {
+                break;
+            }
+            // e.g. A1B2;1766675463;19.12\n
+            int written = snprintf((char*)&buffer[ret], EntrySize, "%04x;%ld;%.2f\n", act->serial, act->time, act->value);
+            buffer[written - 1] = '\n';
+            ret += written;
+        }
+
+        if (ret == 0) {
+            _mutex.unlock();
+        }
+        MessageOutput.printf("ret=%d\r\n", ret);
+        return ret;
+    };
     return true;
 }
 

@@ -25,6 +25,7 @@ public:
 
     bool getTemperature(uint16_t serial, uint32_t& time, float& value);
     bool getTemperatureFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
+    bool getBackup(ResponseFiller& responseFiller);
     bool valueChanged(uint16_t serial, uint32_t seconds);
 
 private:

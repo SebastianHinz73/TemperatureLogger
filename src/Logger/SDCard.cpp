@@ -84,9 +84,66 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
 
 bool SDCardClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
+
+    auto containsStart = [](const uint8_t* buffer, size_t len, time_t start) -> bool {
+        size_t pos = 0;
+        while (pos < len) {
+            // find ';'
+            const uint8_t* sep = (const uint8_t*)memchr(&buffer[pos], ';', len - pos);
+            if (sep == nullptr) {
+                break;
+            }
+            time_t t = atoi((const char*)(&buffer[pos])); // time
+            if (t >= start) {
+                return true;
+            }
+            pos = (sep - buffer) + 1;
+        }
+        return false;
+    };
+
+
+    // ignore length here (max 24h)
     // restriction on start & length: start is beginning of a day, length is not longer that 24h
     responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+
+
         size_t ret = _file.readBytes((char*)buffer, maxLen);
+#if 0
+        bool bStartFound = false;
+
+
+        uint8_t* lastLineEnd = nullptr;
+
+        for(size_t i = 0; i < ret; i++) {
+            if(buffer[i] == ';' && lastLineEnd != nullptr)
+            {
+                time_t t = atoi((char*)lastLineEnd + 1); // time
+                if(t >= start)
+                {
+
+                }
+
+            }
+            else if (buffer[i] == '\r') {
+                lastLineEnd = &buffer[i];
+                // remove \r
+                //memcpy(&buffer[i], &buffer[i + 1], ret - i - 1);
+                //ret--;
+            }
+        }
+        /*
+        if (!file.printf("%ld;%.2f\n", time, value)) {
+            MessageOutput.println("SD card: Append failed");
+        }
+        */
+        /*if (act->time > start + length) {
+                _mutex.unlock();
+                break;
+            }
+*/
+#endif
+
         if (ret == 0) {
             _file.close();
             _mutex.unlock();

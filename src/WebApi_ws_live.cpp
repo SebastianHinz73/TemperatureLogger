@@ -5,6 +5,7 @@
 #include "WebApi_ws_live.h"
 #include "Datastore.h"
 #include "MessageOutput.h"
+#include "Logger/RamDrive.h"
 #include "Utils.h"
 #include "WebApi.h"
 #include "defaults.h"
@@ -193,23 +194,35 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
             return;
         }
 
-        if (!request->hasParam("id") || !request->hasParam("start") || !request->hasParam("length")) {
-            MessageOutput.printf("WebApiIotSensorData: Parameter id, start or length missing\r\n");
-            request->send(200);
-            return;
-        }
-
-        uint16_t serial = strtol(request->getParam("id")->value().c_str(), 0, 16);
-        time_t start = request->getParam("start")->value().toInt();
-        uint32_t length = request->getParam("length")->value().toInt();
-
-        _mutexGraphData.lock();
-
         static ResponseFiller responseFiller;
-        if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
-            MessageOutput.print("WebApi_ws_live: Can not get file.\r\n");
+
+        if(pRamDrive != nullptr && request->hasParam("backup")) {
+            _mutexGraphData.lock();
+
+            if (!Datastore.getBackup(responseFiller)) {
+                MessageOutput.print("WebApi_ws_live: Can not get backup.\r\n");
+                request->send(200);
+                _mutexGraphData.unlock();
+                return;
+            }
+        }
+        else if (request->hasParam("id") && request->hasParam("start") && request->hasParam("length")) {
+            _mutexGraphData.lock();
+
+            uint16_t serial = strtol(request->getParam("id")->value().c_str(), 0, 16);
+            time_t start = request->getParam("start")->value().toInt();
+            uint32_t length = request->getParam("length")->value().toInt();
+
+            if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
+                MessageOutput.print("WebApi_ws_live: Can not get file.\r\n");
+                request->send(200);
+                _mutexGraphData.unlock();
+                return;
+            }
+        }
+        else{
+            MessageOutput.printf("WebApiIotSensorData: Parameter id, start or length or backupmissing\r\n");
             request->send(200);
-            _mutexGraphData.unlock();
             return;
         }
 

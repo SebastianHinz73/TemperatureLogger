@@ -32,8 +32,10 @@ public:
 
     void writeValue(uint16_t serial, time_t time, float value);
     bool getEntry(uint16_t serial, time_t time, dataEntry_t*& act);
+    bool backupEntry(dataEntry_t*& act);
 
     time_t getOldestTime() const { return _header->first->time; }
+    time_t getNewestTime() const { return _header->last->time; }
 
     size_t getTotalElements() const { return _elements; }
     size_t getUsedElements() const { return _header->last >= _header->first ? _header->last - _header->first : _elements; }
