@@ -35,6 +35,20 @@
                     </tbody>
                 </table>
             </div>
+            <div v-if="downloading" class="mb-3">
+                <div class="progress">
+                    <div
+                        class="progress-bar"
+                        role="progressbar"
+                        :style="{ width: downloadProgress + '%' }"
+                        v-bind:aria-valuenow="downloadProgress"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    >
+                        {{ downloadProgress }}%
+                    </div>
+                </div>
+            </div>
         </CardElement>
 
         <CardElement :text="$t('fileadmin.RestoreHeader')" textVariant="text-bg-primary" add-space center-content>
@@ -200,6 +214,9 @@ export default defineComponent({
                 },
             ],
             isValidJson: false,
+            // download state
+            downloading: false,
+            downloadProgress: 0,
         };
     },
     mounted() {
@@ -233,18 +250,66 @@ export default defineComponent({
                 });
         },
         downloadRamDrive(filename: string) {
-            console.log('Downloading RAM Drive: ');
-            fetch('/api/livedata/graphdata?backup', { headers: authHeader() })
-                .then((res) => res.blob())
-                .then((blob) => {
-                    const file = window.URL.createObjectURL(blob);
+            // Use XMLHttpRequest to get download progress events
+            this.downloading = true;
+            this.downloadProgress = 0;
+            const request = new XMLHttpRequest();
+            request.responseType = 'blob';
+
+            request.addEventListener('load', () => {
+                if (request.status === 200) {
+                    const blob = request.response as Blob;
+                    const fileUrl = window.URL.createObjectURL(blob);
                     const a = document.createElement('a');
-                    a.href = file;
+                    a.href = fileUrl;
                     a.download = filename;
                     document.body.appendChild(a);
                     a.click();
                     a.remove();
-                });
+                    window.URL.revokeObjectURL(fileUrl);
+                } else {
+                    // show error in alert
+                    this.alert.message = `[HTTP ERROR] ${request.status}: ${request.statusText}`;
+                    this.alert.type = 'danger';
+                    this.alert.show = true;
+                }
+                this.downloading = false;
+                this.downloadProgress = 0;
+            });
+
+            request.addEventListener('error', () => {
+                this.alert.message = this.$t('fileadmin.DownloadFailed') as string;
+                this.alert.type = 'danger';
+                this.alert.show = true;
+                this.downloading = false;
+                this.downloadProgress = 0;
+            });
+
+            request.addEventListener('abort', () => {
+                this.downloading = false;
+                this.downloadProgress = 0;
+            });
+
+            request.addEventListener('progress', (e: ProgressEvent) => {
+                if (e.lengthComputable) {
+                    this.downloadProgress = Math.trunc((e.loaded / e.total) * 100);
+                } else {
+                    // fallback: show some activity - treat as indeterminate -> keep at 0.. we could animate but keep simple
+                    this.downloadProgress = 0;
+                }
+            });
+
+            request.withCredentials = true;
+            request.open('GET', '/api/livedata/backup');
+            // set auth headers
+            authHeader().forEach((value, key) => {
+                try {
+                    request.setRequestHeader(key, value);
+                } catch {
+                    // some headers may be restricted for XHR; ignore
+                }
+            });
+            request.send();
         },
         callFileApiEndpoint(endpoint: string, jsonData: string) {
             const formData = new FormData();

@@ -8,10 +8,6 @@
 #include <mutex>
 #include <vector>
 
-////////////////////////
-#define ENTRY_TO_STRING_SIZE 15
-#define RAMDRIVE_FILENAME "ramdrive.txt"
-////////////////////////
 class RamDriveClass : public IDataStoreDevice {
 public:
     RamDriveClass();
@@ -31,7 +27,7 @@ public:
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
     virtual bool getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
-    virtual bool getBackup(ResponseFiller& responseFiller);
+    virtual bool getBackup(size_t bytes, ResponseFiller& responseFiller);
 
 private:
     time_t getStartOfDay(const tm& timeinfo);

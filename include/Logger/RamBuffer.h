@@ -37,8 +37,8 @@ public:
     time_t getOldestTime() const { return _header->first->time; }
     time_t getNewestTime() const { return _header->last->time; }
 
-    size_t getTotalElements() const { return _elements; }
-    size_t getUsedElements() const { return _header->last >= _header->first ? _header->last - _header->first : _elements; }
+    size_t getTotalElements() const { return _elements-1; }
+    size_t getUsedElements() const { return _header->last >= _header->first ? _header->last - _header->first : getTotalElements(); }
 
 private:
     int toIndex(const dataEntry_t* entry) const { return entry - _header->start; }

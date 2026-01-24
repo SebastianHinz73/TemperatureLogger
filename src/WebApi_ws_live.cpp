@@ -31,6 +31,7 @@ void WebApiWsLiveClass::init(AsyncWebServer& server, Scheduler& scheduler)
 
     server.on("/api/livedata/status", HTTP_GET, std::bind(&WebApiWsLiveClass::onLivedataStatus, this, _1));
     server.on("/api/livedata/graphdata", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphData, this, _1));
+    server.on("/api/livedata/backup", HTTP_GET, std::bind(&WebApiWsLiveClass::onBackup, this, _1));
 
     server.addHandler(&_ws);
     _ws.onEvent(std::bind(&WebApiWsLiveClass::onWebsocketEvent, this, _1, _2, _3, _4, _5, _6));
@@ -195,19 +196,10 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
         }
 
         static ResponseFiller responseFiller;
+        AsyncWebServerResponse* response = nullptr;
 
-        if(pRamDrive != nullptr && request->hasParam("backup")) {
-            _mutexGraphData.lock();
-
-            if (!Datastore.getBackup(responseFiller)) {
-                MessageOutput.print("WebApi_ws_live: Can not get backup.\r\n");
-                request->send(200);
-                _mutexGraphData.unlock();
-                return;
-            }
-        }
-        else if (request->hasParam("id") && request->hasParam("start") && request->hasParam("length")) {
-            _mutexGraphData.lock();
+        if (request->hasParam("id") && request->hasParam("start") && request->hasParam("length")) {
+            //_mutexGraphData.lock();
 
             uint16_t serial = strtol(request->getParam("id")->value().c_str(), 0, 16);
             time_t start = request->getParam("start")->value().toInt();
@@ -216,23 +208,23 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
             if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
                 MessageOutput.print("WebApi_ws_live: Can not get file.\r\n");
                 request->send(200);
-                _mutexGraphData.unlock();
+                //_mutexGraphData.unlock();
                 return;
             }
+
+            response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+                int send = responseFiller(buffer, maxLen, alreadySent);
+                if(send == 0) {
+                    //_mutexGraphData.unlock();
+                }
+                return send;
+            });
         }
         else{
-            MessageOutput.printf("WebApiIotSensorData: Parameter id, start or length or backupmissing\r\n");
+            MessageOutput.printf("WebApiIotSensorData: Parameter id, start or length\r\n");
             request->send(200);
             return;
         }
-
-        AsyncWebServerResponse* response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-            int send = responseFiller(buffer, maxLen, alreadySent);
-            if(send == 0) {
-                _mutexGraphData.unlock();
-            }
-            return send;
-        });
 
         response->addHeader("Server", "ESP Async Web Server");
         request->send(response);
@@ -242,6 +234,61 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
         _mutexGraphData.unlock();
     } catch (const std::exception& exc) {
         MessageOutput.printf("Unknown exception in /api/livedata/graph. Reason: \"%s\".\r\n", exc.what());
+        WebApi.sendTooManyRequests(request);
+        _mutexGraphData.unlock();
+    }
+}
+
+void WebApiWsLiveClass::onBackup(AsyncWebServerRequest* request)
+{
+    if (!WebApi.checkCredentialsReadonly(request)) {
+        return;
+    }
+
+    try {
+        tm timeinfo;
+        if (!getLocalTime(&timeinfo, 5)) {
+            MessageOutput.printf("WebApiIotSensorData: getLocalTime failed. Ignore\r\n");
+            request->send(200);
+            return;
+        }
+
+        if(pRamDrive == nullptr) {
+            MessageOutput.printf("WebApiIotSensorData: No ramdrive available.\r\n");
+            request->send(200);
+            return;
+        }
+
+        static ResponseFiller responseFiller;
+        AsyncWebServerResponse* response = nullptr;
+
+        _mutexGraphData.lock();
+
+        size_t usedBytes = pRamDrive->getUsedBytes();
+        if (!Datastore.getBackup(usedBytes, responseFiller)) {
+            MessageOutput.print("WebApi_ws_live: Can not get backup.\r\n");
+            request->send(200);
+            //_mutexGraphData.unlock();
+            return;
+        }
+        MessageOutput.printf("WebApi_ws_live: usedBytes=%d.\r\n", usedBytes);
+
+        response = request->beginResponse("text/plain", usedBytes, [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+            int send = responseFiller(buffer, maxLen, alreadySent);
+            if(send == 0) {
+                //_mutexGraphData.unlock();
+            }
+            return send;
+        });
+
+        response->addHeader("Server", "ESP Async Web Server");
+        request->send(response);
+    } catch (const std::bad_alloc& bad_alloc) {
+        MessageOutput.printf("Call to /api/livedata/backup temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
+        WebApi.sendTooManyRequests(request);
+        _mutexGraphData.unlock();
+    } catch (const std::exception& exc) {
+        MessageOutput.printf("Unknown exception in /api/livedata/backup. Reason: \"%s\".\r\n", exc.what());
         WebApi.sendTooManyRequests(request);
         _mutexGraphData.unlock();
     }

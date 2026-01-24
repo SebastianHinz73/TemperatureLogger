@@ -62,8 +62,8 @@ void RamDriveClass::FreeRamDrive()
 
 void RamDriveClass::writeValue(uint16_t serial, time_t time, float value)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
-    _ramBuffer->writeValue(serial, time, value);
+    //std::lock_guard<std::mutex> lock(_mutex);
+    //_ramBuffer->writeValue(serial, time, value);
 }
 
 bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
@@ -73,10 +73,10 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
     static dataEntry_t* act;
     act = nullptr;
 
-        responseFiller = [&, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+    responseFiller = [&, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
 
-        MessageOutput.printf("RamDriveClass::getFile 0x%X responseFiller maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
+        //MessageOutput.printf("RamDriveClass::getFile 0x%X responseFiller maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
         const int EntrySize = 20; // typically entry count 17
         while (maxLen - ret > EntrySize) {
             if (!_ramBuffer->getEntry(serial, start, act)) {
@@ -87,46 +87,63 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
                 break;
             }
             // e.g. 1766675463;19.12\n
+            //int written = snprintf((char*)entryBuffer, sizeof(entryBuffer), "%ld;%.2f\n", act->time, act->value);
             int written = snprintf((char*)&buffer[ret], EntrySize, "%ld;%.2f\n", act->time, act->value);
-            buffer[written - 1] = '\n';
-
             ret += written;
+            buffer[written - 1] = '\n';
         }
 
         if (ret == 0) {
             _mutex.unlock();
+        } else { // important to fill the buffer completely, otherwise chunked response ends too early
+            for(; ret < maxLen; ret++) {
+                buffer[ret] = (ret == maxLen - 1) ? '\n' : ' ';
+            }
         }
         return ret;
     };
     return true;
 }
 
-bool RamDriveClass::getBackup(ResponseFiller& responseFiller)
+bool RamDriveClass::getBackup(size_t bytes, ResponseFiller& responseFiller)
 {
-    _mutex.lock();
-
+    //_mutex.lock();
     static dataEntry_t* act;
     act = nullptr;
+    static int written = sizeof(dataEntry_t);
 
-    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+    responseFiller = [&, bytes](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
 
-        MessageOutput.printf("RamDriveClass::getFile responseFiller maxLen:%d, alreadySent:%d\r\n", maxLen, alreadySent);
-        const int EntrySize = 25; // typically entry count 22
-        while (maxLen - ret > EntrySize) {
+        //MessageOutput.printf("RamDriveClass::getBackup responseFiller maxLen:%d, alreadySent:%d, written=%d\r\n", maxLen, alreadySent, written);
+        // copy rest from previous call
+        if((written != sizeof(dataEntry_t)) && (maxLen > sizeof(dataEntry_t)))
+        {
+            memcpy(buffer, &((char*)act)[written], sizeof(dataEntry_t) - written);
+            ret += sizeof(dataEntry_t) - written;
+            //MessageOutput.printf("RamDriveClass::getBackup ret=%d\r\n", ret);
+        }
+
+        while (maxLen - ret > 0) {
             if (!_ramBuffer->backupEntry(act)) {
                 break;
             }
-            // e.g. A1B2;1766675463;19.12\n
-            int written = snprintf((char*)&buffer[ret], EntrySize, "%04x;%ld;%.2f\n", act->serial, act->time, act->value);
-            buffer[written - 1] = '\n';
+            // copy partially if not enough space
+            written = maxLen - ret >= sizeof(dataEntry_t) ? sizeof(dataEntry_t) : maxLen - ret;
+            memcpy(&buffer[ret], act, written);
             ret += written;
         }
 
-        if (ret == 0) {
-            _mutex.unlock();
+        if(bytes < alreadySent + 100000)
+        {
+            MessageOutput.printf(" %d %d\r\n", alreadySent + ret, bytes);
         }
-        MessageOutput.printf("ret=%d\r\n", ret);
+
+        if (alreadySent + ret >= bytes) {
+            //_mutex.unlock();
+            MessageOutput.printf("_mutex.unlock(); %d %d\r\n", alreadySent + ret, bytes);
+        }
+        //MessageOutput.printf("ret=%d\r\n", ret);
         return ret;
     };
     return true;
