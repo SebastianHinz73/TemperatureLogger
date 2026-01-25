@@ -18,7 +18,9 @@ private:
     void onLivedataStatus(AsyncWebServerRequest* request);
     void onGraphUpdate(AsyncWebServerRequest* request);
     void onGraphData(AsyncWebServerRequest* request);
-    void onBackup(AsyncWebServerRequest* request);
+    void onBackupGet(AsyncWebServerRequest* request);
+    void onBackupUpload(AsyncWebServerRequest* request, String filename, size_t index, uint8_t* data, size_t len, bool final);
+    void onBackupUploadFinish(AsyncWebServerRequest* request);
     void onWebsocketEvent(AsyncWebSocket* server, AsyncWebSocketClient* client, AwsEventType type, void* arg, uint8_t* data, size_t len);
 
     AsyncWebSocket _ws;

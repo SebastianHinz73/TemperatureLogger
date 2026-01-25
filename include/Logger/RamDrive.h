@@ -28,6 +28,7 @@ public:
     virtual void writeValue(uint16_t serial, time_t time, float value);
     virtual bool getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
     virtual bool getBackup(size_t bytes, ResponseFiller& responseFiller);
+    //bool restoreBackup(const uint8_t* data, size_t len);
 
 private:
     time_t getStartOfDay(const tm& timeinfo);

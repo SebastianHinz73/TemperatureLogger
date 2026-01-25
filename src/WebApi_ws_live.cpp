@@ -11,6 +11,7 @@
 #include "defaults.h"
 #include <AsyncJson.h>
 #include "mbedtls/base64.h"
+#include <RestartHelper.h>
 
 
 WebApiWsLiveClass::WebApiWsLiveClass()
@@ -31,7 +32,10 @@ void WebApiWsLiveClass::init(AsyncWebServer& server, Scheduler& scheduler)
 
     server.on("/api/livedata/status", HTTP_GET, std::bind(&WebApiWsLiveClass::onLivedataStatus, this, _1));
     server.on("/api/livedata/graphdata", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphData, this, _1));
-    server.on("/api/livedata/backup", HTTP_GET, std::bind(&WebApiWsLiveClass::onBackup, this, _1));
+    server.on("/api/livedata/backup", HTTP_GET, std::bind(&WebApiWsLiveClass::onBackupGet, this, _1));
+    server.on("/api/livedata/backup", HTTP_POST,
+        std::bind(&WebApiWsLiveClass::onBackupUploadFinish, this, _1),
+        std::bind(&WebApiWsLiveClass::onBackupUpload, this, _1, _2, _3, _4, _5, _6));
 
     server.addHandler(&_ws);
     _ws.onEvent(std::bind(&WebApiWsLiveClass::onWebsocketEvent, this, _1, _2, _3, _4, _5, _6));
@@ -239,7 +243,7 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
     }
 }
 
-void WebApiWsLiveClass::onBackup(AsyncWebServerRequest* request)
+void WebApiWsLiveClass::onBackupGet(AsyncWebServerRequest* request)
 {
     if (!WebApi.checkCredentialsReadonly(request)) {
         return;
@@ -294,3 +298,52 @@ void WebApiWsLiveClass::onBackup(AsyncWebServerRequest* request)
     }
 }
 
+void WebApiWsLiveClass::onBackupUpload(AsyncWebServerRequest* request, String filename, size_t index, uint8_t* data, size_t len, bool final)
+{
+    if (!WebApi.checkCredentials(request)) {
+        return;
+    }
+    MessageOutput.printf("onBackupUpload: %s, index: %d, len: %d, final: %d\r\n", filename.c_str(), index,len,final);
+
+
+    /*
+    if (!index) {
+        // open the file on first call and store the file handle in the request object
+        if (!request->hasParam("file")) {
+            request->send(500);
+            return;
+        }
+        const String name = "/" + request->getParam("file")->value();
+        request->_tempFile = LittleFS.open(name, "w");
+    }
+
+    if (len) {
+        // stream the incoming chunk to the opened file
+        request->_tempFile.write(data, len);
+    }
+
+    if (final) {
+        // close the file handle as the upload is now done
+        request->_tempFile.close();
+    }
+*/
+
+}
+
+void WebApiWsLiveClass::onBackupUploadFinish(AsyncWebServerRequest* request)
+{
+    // This path is used when POST is invoked without multipart upload support.
+    if (!WebApi.checkCredentials(request)) {
+        return;
+    }
+    MessageOutput.printf("onBackupUploadFinish: \r\n");
+
+    // the request handler is triggered after the upload has finished...
+    // create the response, add header, and send response
+
+    AsyncWebServerResponse* response = request->beginResponse(200, "text/plain", "OK");
+    response->addHeader("Connection", "close");
+    response->addHeader("Access-Control-Allow-Origin", "*");
+    request->send(response);
+    //RestartHelper.triggerRestart();
+}

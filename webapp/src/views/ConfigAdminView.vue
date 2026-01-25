@@ -29,23 +29,26 @@
                                 >&nbsp;
                                 <a href="#" class="icon" :title="$t('fileadmin.Download')">
                                     <BIconDownload v-on:click="!file.data_backup ? downloadFile(file.name) : downloadRamDrive(file.name)" />
-                                </a>
+                                </a>&nbsp;
+                                <a href="#" v-if="file.data_backup" class="icon" :title="$t('fileadmin.Upload')">
+                                    <BIconUpload v-on:click="uploadRamDrive" /> </a
+                                >
                             </td>
                         </tr>
                     </tbody>
                 </table>
             </div>
-            <div v-if="downloading" class="mb-3">
+            <div v-if="ramdriveLoading" class="mb-3">
                 <div class="progress">
                     <div
                         class="progress-bar"
                         role="progressbar"
-                        :style="{ width: downloadProgress + '%' }"
-                        v-bind:aria-valuenow="downloadProgress"
+                        :style="{ width: ramdriveProgress + '%' }"
+                        v-bind:aria-valuenow="ramdriveProgress"
                         aria-valuemin="0"
                         aria-valuemax="100"
                     >
-                        {{ downloadProgress }}%
+                        {{ ramdriveProgress }}%
                     </div>
                 </div>
             </div>
@@ -165,6 +168,7 @@ import {
     BIconArrowLeft,
     BIconCheckCircle,
     BIconDownload,
+    BIconUpload,
     BIconExclamationCircleFill,
     BIconTrash,
 } from 'bootstrap-icons-vue';
@@ -179,6 +183,7 @@ export default defineComponent({
         BIconArrowLeft,
         BIconCheckCircle,
         BIconDownload,
+        BIconUpload,
         BIconExclamationCircleFill,
         BIconTrash,
     },
@@ -214,9 +219,9 @@ export default defineComponent({
                 },
             ],
             isValidJson: false,
-            // download state
-            downloading: false,
-            downloadProgress: 0,
+            // ramdrive upload/download state
+            ramdriveLoading: false,
+            ramdriveProgress: 0,
         };
     },
     mounted() {
@@ -251,8 +256,8 @@ export default defineComponent({
         },
         downloadRamDrive(filename: string) {
             // Use XMLHttpRequest to get download progress events
-            this.downloading = true;
-            this.downloadProgress = 0;
+            this.ramdriveLoading = true;
+            this.ramdriveProgress = 0;
             const request = new XMLHttpRequest();
             request.responseType = 'blob';
 
@@ -273,29 +278,29 @@ export default defineComponent({
                     this.alert.type = 'danger';
                     this.alert.show = true;
                 }
-                this.downloading = false;
-                this.downloadProgress = 0;
+                this.ramdriveLoading = false;
+                this.ramdriveProgress = 0;
             });
 
             request.addEventListener('error', () => {
                 this.alert.message = this.$t('fileadmin.DownloadFailed') as string;
                 this.alert.type = 'danger';
                 this.alert.show = true;
-                this.downloading = false;
-                this.downloadProgress = 0;
+                this.ramdriveLoading = false;
+                this.ramdriveProgress = 0;
             });
 
             request.addEventListener('abort', () => {
-                this.downloading = false;
-                this.downloadProgress = 0;
+                this.ramdriveLoading = false;
+                this.ramdriveProgress = 0;
             });
 
             request.addEventListener('progress', (e: ProgressEvent) => {
                 if (e.lengthComputable) {
-                    this.downloadProgress = Math.trunc((e.loaded / e.total) * 100);
+                    this.ramdriveProgress = Math.trunc((e.loaded / e.total) * 100);
                 } else {
                     // fallback: show some activity - treat as indeterminate -> keep at 0.. we could animate but keep simple
-                    this.downloadProgress = 0;
+                    this.ramdriveProgress = 0;
                 }
             });
 
@@ -303,11 +308,7 @@ export default defineComponent({
             request.open('GET', '/api/livedata/backup');
             // set auth headers
             authHeader().forEach((value, key) => {
-                try {
-                    request.setRequestHeader(key, value);
-                } catch {
-                    // some headers may be restricted for XHR; ignore
-                }
+                request.setRequestHeader(key, value);
             });
             request.send();
         },
@@ -443,6 +444,75 @@ export default defineComponent({
             this.UploadError = '';
             this.UploadSuccess = false;
             this.getFileList();
+        },
+        uploadRamDrive() {
+            // open a file picker and upload selected file to the device (restore ramdrive)
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '*/*';
+            input.addEventListener('change', () => {
+                if (!input.files || !input.files[0]) {
+                    return;
+                }
+
+                const file = input.files[0];
+
+                this.ramdriveLoading = true;
+                this.ramdriveProgress = 0;
+
+                const request = new XMLHttpRequest();
+
+                request.addEventListener('load', () => {
+                    if (request.status === 200) {
+                        this.alert.message = this.$t('fileadmin.UploadSuccess') as string;
+                        this.alert.type = 'success';
+                        this.alert.show = true;
+                        // trigger refresh
+                        this.getFileList();
+                    } else {
+                        this.alert.message = `[HTTP ERROR] ${request.status}: ${request.statusText}`;
+                        this.alert.type = 'danger';
+                        this.alert.show = true;
+                    }
+                    this.ramdriveLoading = false;
+                    this.ramdriveProgress = 0;
+                });
+
+                request.addEventListener('error', () => {
+                    this.alert.message = this.$t('fileadmin.UploadFailed') as string;
+                    this.alert.type = 'danger';
+                    this.alert.show = true;
+                    this.ramdriveLoading = false;
+                    this.ramdriveProgress = 0;
+                });
+
+                request.addEventListener('abort', () => {
+                    this.ramdriveLoading = false;
+                    this.ramdriveProgress = 0;
+                });
+
+                request.upload.addEventListener('progress', (e: ProgressEvent) => {
+                    if (e.lengthComputable) {
+                        this.ramdriveProgress = Math.trunc((e.loaded / e.total) * 100);
+                    } else {
+                        this.ramdriveProgress = 0;
+                    }
+                });
+
+                request.withCredentials = true;
+
+                request.open('POST', '/api/livedata/backup');
+                // set auth headers
+                authHeader().forEach((value, key) => {
+                    request.setRequestHeader(key, value);
+                });
+
+                // send the file blob directly
+                request.send(file);
+            });
+
+            // trigger file picker
+            input.click();
         },
         onFactoryResetModal() {
             this.modalFactoryReset.show();

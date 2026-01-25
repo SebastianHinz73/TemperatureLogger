@@ -25,6 +25,31 @@ RamDriveClass::RamDriveClass()
     }
 }
 
+#if 0
+bool RamDriveClass::restoreBackup(const uint8_t* data, size_t len)
+{
+    // Simple restore: append entries from provided buffer into the ram buffer.
+    // The buffer is expected to contain a sequence of packed dataEntry_t structures.
+    if (data == nullptr || len < (int)sizeof(dataEntry_t)) {
+        return false;
+    }
+
+    size_t count = len / sizeof(dataEntry_t);
+    const dataEntry_t* entries = (const dataEntry_t*)data;
+
+    // write each entry into ram buffer
+    for (size_t i = 0; i < count; i++) {
+        const dataEntry_t& e = entries[i];
+        // validate value range
+        if (e.value < -200.0f || e.value > 200.0f) {
+            continue;
+        }
+        _ramBuffer->writeValue(e.serial, e.time, e.value);
+    }
+    return true;
+}
+#endif
+
 void RamDriveClass::AllocateRamDrive()
 {
     if (ESP.getPsramSize() > 0) // PSRAM available
