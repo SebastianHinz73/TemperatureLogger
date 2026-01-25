@@ -32,7 +32,7 @@ void WebApiWsLiveClass::init(AsyncWebServer& server, Scheduler& scheduler)
 
     server.on("/api/livedata/status", HTTP_GET, std::bind(&WebApiWsLiveClass::onLivedataStatus, this, _1));
     server.on("/api/livedata/graphdata", HTTP_GET, std::bind(&WebApiWsLiveClass::onGraphData, this, _1));
-    server.on("/api/livedata/backup", HTTP_GET, std::bind(&WebApiWsLiveClass::onBackupGet, this, _1));
+    server.on("/api/livedata/backup", HTTP_GET, std::bind(&WebApiWsLiveClass::onBackup, this, _1));
     server.on("/api/livedata/backup", HTTP_POST,
         std::bind(&WebApiWsLiveClass::onBackupUploadFinish, this, _1),
         std::bind(&WebApiWsLiveClass::onBackupUpload, this, _1, _2, _3, _4, _5, _6));
@@ -243,7 +243,7 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
     }
 }
 
-void WebApiWsLiveClass::onBackupGet(AsyncWebServerRequest* request)
+void WebApiWsLiveClass::onBackup(AsyncWebServerRequest* request)
 {
     if (!WebApi.checkCredentialsReadonly(request)) {
         return;
@@ -305,29 +305,21 @@ void WebApiWsLiveClass::onBackupUpload(AsyncWebServerRequest* request, String fi
     }
     MessageOutput.printf("onBackupUpload: %s, index: %d, len: %d, final: %d\r\n", filename.c_str(), index,len,final);
 
-
-    /*
-    if (!index) {
-        // open the file on first call and store the file handle in the request object
-        if (!request->hasParam("file")) {
-            request->send(500);
-            return;
-        }
-        const String name = "/" + request->getParam("file")->value();
-        request->_tempFile = LittleFS.open(name, "w");
+    if(pRamDrive == nullptr) {
+        MessageOutput.printf("WebApiIotSensorData: No ramdrive available.\r\n");
+        return;
     }
 
-    if (len) {
-        // stream the incoming chunk to the opened file
-        request->_tempFile.write(data, len);
+    if (!Datastore.restoreBackup(index, data, len)) {
+        MessageOutput.print("WebApi_ws_live: Can not restore backup. No valid backup file.\r\n");
+        request->send(404);
+        return;
     }
 
     if (final) {
         // close the file handle as the upload is now done
         request->_tempFile.close();
     }
-*/
-
 }
 
 void WebApiWsLiveClass::onBackupUploadFinish(AsyncWebServerRequest* request)
@@ -345,5 +337,5 @@ void WebApiWsLiveClass::onBackupUploadFinish(AsyncWebServerRequest* request)
     response->addHeader("Connection", "close");
     response->addHeader("Access-Control-Allow-Origin", "*");
     request->send(response);
-    //RestartHelper.triggerRestart();
+    RestartHelper.triggerRestart();
 }

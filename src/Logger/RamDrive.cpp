@@ -25,31 +25,6 @@ RamDriveClass::RamDriveClass()
     }
 }
 
-#if 0
-bool RamDriveClass::restoreBackup(const uint8_t* data, size_t len)
-{
-    // Simple restore: append entries from provided buffer into the ram buffer.
-    // The buffer is expected to contain a sequence of packed dataEntry_t structures.
-    if (data == nullptr || len < (int)sizeof(dataEntry_t)) {
-        return false;
-    }
-
-    size_t count = len / sizeof(dataEntry_t);
-    const dataEntry_t* entries = (const dataEntry_t*)data;
-
-    // write each entry into ram buffer
-    for (size_t i = 0; i < count; i++) {
-        const dataEntry_t& e = entries[i];
-        // validate value range
-        if (e.value < -200.0f || e.value > 200.0f) {
-            continue;
-        }
-        _ramBuffer->writeValue(e.serial, e.time, e.value);
-    }
-    return true;
-}
-#endif
-
 void RamDriveClass::AllocateRamDrive()
 {
     if (ESP.getPsramSize() > 0) // PSRAM available
@@ -87,14 +62,15 @@ void RamDriveClass::FreeRamDrive()
 
 void RamDriveClass::writeValue(uint16_t serial, time_t time, float value)
 {
-    //std::lock_guard<std::mutex> lock(_mutex);
-    //_ramBuffer->writeValue(serial, time, value);
+    std::lock_guard<std::mutex> lock(_mutex);
+    _ramBuffer->writeValue(serial, time, value);
 }
 
 bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
-    _mutex.lock();
+    //_mutex.lock();
 
+    
     static dataEntry_t* act;
     act = nullptr;
 
@@ -108,7 +84,7 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
                 break;
             }
             if (act->time > start + length) {
-                _mutex.unlock();
+                //_mutex.unlock();
                 break;
             }
             // e.g. 1766675463;19.12\n
@@ -119,7 +95,7 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
         }
 
         if (ret == 0) {
-            _mutex.unlock();
+            //_mutex.unlock();
         } else { // important to fill the buffer completely, otherwise chunked response ends too early
             for(; ret < maxLen; ret++) {
                 buffer[ret] = (ret == maxLen - 1) ? '\n' : ' ';
@@ -171,6 +147,65 @@ bool RamDriveClass::getBackup(size_t bytes, ResponseFiller& responseFiller)
         //MessageOutput.printf("ret=%d\r\n", ret);
         return ret;
     };
+    return true;
+}
+
+bool RamDriveClass::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len)
+{
+    // Simple restore: append entries from provided buffer into the ram buffer.
+    // The buffer is expected to contain a sequence of packed dataEntry_t structures.
+    if (data == nullptr || len < (int)sizeof(dataEntry_t)) {
+        return false;
+    }
+    static dataEntry_t incompleteEntry;
+    static size_t incompleteLen = 0;
+
+    if(alreadyWritten == 0) {
+        memset(&incompleteEntry, 0, sizeof(dataEntry_t));
+        incompleteLen = 0;
+
+        _ramBuffer->PowerOnInitialize();
+    }
+
+    if(incompleteLen > 0) {
+        size_t toCopy = sizeof(dataEntry_t) - incompleteLen;
+        if(len < toCopy) {
+            toCopy = len;
+        }
+        memcpy((uint8_t*)&incompleteEntry + incompleteLen, data, toCopy);
+        incompleteLen += toCopy;
+        data += toCopy;
+        len -= toCopy;
+
+        if (incompleteEntry.value >= -200.0f && incompleteEntry.value <= 200.0f) {
+            _ramBuffer->writeValue(incompleteEntry.serial, incompleteEntry.time, incompleteEntry.value);
+        }
+        else
+        {
+            MessageOutput.printf("RamDriveClass::restoreBackup: Skipping invalid value %.2f\r\n", incompleteEntry.value);
+        }
+        incompleteLen = 0;
+    }
+
+    size_t count = len / sizeof(dataEntry_t);
+    incompleteLen = len % sizeof(dataEntry_t);
+
+    const dataEntry_t* entries = (const dataEntry_t*)data;
+
+    // write each entry into ram buffer
+    for (size_t i = 0; i < count; i++) {
+        const dataEntry_t& e = entries[i];
+        // validate value range
+        if (e.value < -200.0f || e.value > 200.0f) {
+            continue;
+        }
+        _ramBuffer->writeValue(e.serial, e.time, e.value);
+    }
+
+    if(incompleteLen > 0) {
+        memcpy((uint8_t*)&incompleteEntry, &data[count], incompleteLen);
+    }
+
     return true;
 }
 

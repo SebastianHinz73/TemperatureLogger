@@ -31,22 +31,6 @@ void RamBuffer::PowerOnInitialize()
     if (_cache != nullptr) {
         memset(_cache, 0, _cacheSize);
     }
-	/*
-    uint16_t serials [] = {0xc938, 0xe65a};
-    time_t end = 1768151677  ;
-    time_t start = end - 60*60*24*90; // 7 days
-
-    int serialIndex = 0;
-    float value = -55;
-    while(start < end) {
-        //serialIndex = (serialIndex + 1) % 2;
-        writeValue(0xc938, start, value);
-        value += 1;
-        if(value > 125.0f) {
-            value = -55;
-        }
-        start += 10;
-    }*/
 }
 
 bool RamBuffer::IntegrityCheck()
@@ -93,7 +77,7 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
     _header->last->serial = serial;
     _header->last->time = time;
     _header->last->value = value;
-    // MessageOutput.printf("writeValue: ## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
+     MessageOutput.printf("writeValue: ## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
 
     _header->last++;
 

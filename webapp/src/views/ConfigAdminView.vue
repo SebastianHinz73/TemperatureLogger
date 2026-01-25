@@ -507,8 +507,11 @@ export default defineComponent({
                     request.setRequestHeader(key, value);
                 });
 
-                // send the file blob directly
-                request.send(file);
+                // send the file as multipart/form-data to trigger server-side upload callbacks
+                const formData = new FormData();
+                // use field name 'file' so server upload handler receives it in onUpload
+                formData.append('file', file, file.name);
+                request.send(formData);
             });
 
             // trigger file picker

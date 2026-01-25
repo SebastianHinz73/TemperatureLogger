@@ -110,3 +110,12 @@ bool DatastoreClass::getBackup(size_t bytes, ResponseFiller& responseFiller)
 
     return _device->getBackup(bytes, responseFiller);
 }
+
+bool DatastoreClass::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (_device == nullptr)
+        return false;
+
+    return _device->restoreBackup(alreadyWritten, data, len);
+}
