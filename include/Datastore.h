@@ -25,12 +25,12 @@ public:
 
     bool getTemperature(uint16_t serial, uint32_t& time, float& value);
     bool getTemperatureFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
-    bool getBackup(size_t bytes, ResponseFiller& responseFiller);
-    bool restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len);
+    bool getBackup(ResponseFiller& responseFiller);
+    bool restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final);
     bool valueChanged(uint16_t serial, uint32_t seconds);
 
 private:
-    std::mutex _mutex;
+    std::mutex _mutexSensorList;
     IDataStoreDevice* _device;
 
     std::vector<std::unique_ptr<Datasensor>> _list;

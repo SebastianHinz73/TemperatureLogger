@@ -5,6 +5,7 @@
 #include <ArduinoJson.h>
 #include <ESPAsyncWebServer.h>
 #include <TaskSchedulerDeclarations.h>
+#include "Logger/TimeoutMutex.h"
 
 class WebApiWsLiveClass {
 public:
@@ -27,8 +28,9 @@ private:
     AuthenticationMiddleware _simpleDigestAuth;
 
     unsigned long _lastPublishStats = 0;
-    std::mutex _mutex;
-    std::mutex _mutexGraphData;
+    std::mutex _mutexStatus;
+
+    TimeoutMutex _mutexFileReponse;
 
     Task _wsCleanupTask;
     void wsCleanupTaskCb();

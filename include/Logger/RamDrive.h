@@ -7,6 +7,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
+#include "TimeoutMutex.h"
 
 class RamDriveClass : public IDataStoreDevice {
 public:
@@ -27,15 +28,16 @@ public:
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
     virtual bool getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
-    virtual bool getBackup(size_t bytes, ResponseFiller& responseFiller);
-    virtual bool restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len);
+    virtual bool getBackup(ResponseFiller& responseFiller);
+    virtual bool restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final);
 
 private:
+    void startupCheck();
     time_t getStartOfDay(const tm& timeinfo);
 
 private:
     RamBuffer* _ramBuffer;
-    std::mutex _mutex;
+    TimeoutMutex _mutexRamDrive;
 
 private:
     static uint8_t* _ramDrive;

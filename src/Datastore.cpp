@@ -11,13 +11,12 @@ DatastoreClass Datastore;
 
 void DatastoreClass::init(IDataStoreDevice* device)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
     _device = device;
 }
 
 void DatastoreClass::addSensor(uint16_t serial)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutexSensorList);
 
     uint8_t mDay = 0;
     struct tm timeinfo;
@@ -30,7 +29,7 @@ void DatastoreClass::addSensor(uint16_t serial)
 
 bool DatastoreClass::validSensor(uint16_t serial)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutexSensorList);
 
     for (const auto& entry : _list) {
         if (entry->Serial() == serial) {
@@ -42,7 +41,7 @@ bool DatastoreClass::validSensor(uint16_t serial)
 
 void DatastoreClass::addValue(uint16_t serial, float value)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutexSensorList);
     if (_device == nullptr)
         return;
 
@@ -57,7 +56,7 @@ void DatastoreClass::addValue(uint16_t serial, float value)
 
 bool DatastoreClass::getTemperature(uint16_t serial, uint32_t& time, float& value)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutexSensorList);
 
     for (const auto& entry : _list) {
         if (entry->Serial() == serial) {
@@ -70,7 +69,7 @@ bool DatastoreClass::getTemperature(uint16_t serial, uint32_t& time, float& valu
 
 bool DatastoreClass::valueChanged(uint16_t serial, uint32_t seconds)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
+    std::lock_guard<std::mutex> lock(_mutexSensorList);
 
     for (const auto& entry : _list) {
         if (entry->Serial() == serial) {
@@ -95,27 +94,24 @@ bool DatastoreClass::getTmTime(struct tm* info, time_t time, uint32_t ms)
 
 bool DatastoreClass::getTemperatureFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
     if (_device == nullptr)
         return false;
 
     return _device->getFile(serial, start, length, responseFiller);
 }
 
-bool DatastoreClass::getBackup(size_t bytes, ResponseFiller& responseFiller)
+bool DatastoreClass::getBackup(ResponseFiller& responseFiller)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
     if (_device == nullptr)
         return false;
 
-    return _device->getBackup(bytes, responseFiller);
+    return _device->getBackup(responseFiller);
 }
 
-bool DatastoreClass::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len)
+bool DatastoreClass::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
     if (_device == nullptr)
         return false;
 
-    return _device->restoreBackup(alreadyWritten, data, len);
+    return _device->restoreBackup(alreadyWritten, data, len, final);
 }
