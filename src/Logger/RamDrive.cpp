@@ -118,7 +118,7 @@ bool RamDriveClass::restoreBackup(size_t alreadyWritten, const uint8_t* data, si
 {
     if(alreadyWritten == 0)
     {
-        if(_mutexRamDrive.TryLock(100, 20000))
+        if(!_mutexRamDrive.TryLock(100, 20000))
         {
             return false;
         }
