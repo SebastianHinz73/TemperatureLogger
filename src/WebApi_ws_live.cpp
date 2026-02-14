@@ -346,4 +346,5 @@ void WebApiWsLiveClass::onBackupUploadFinish(AsyncWebServerRequest* request)
     response->addHeader("Connection", "close");
     response->addHeader("Access-Control-Allow-Origin", "*");
     request->send(response);
+    RestartHelper.triggerRestart();
 }
