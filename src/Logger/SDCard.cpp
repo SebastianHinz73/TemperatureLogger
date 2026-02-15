@@ -82,85 +82,107 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
     file.close();
 }
 
-bool SDCardClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
+bool SDCardClass::getFile(uint16_t serial, time_t time_start, uint32_t length, ResponseFiller& responseFiller)
 {
+    responseFiller = [&, serial, time_start](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
 
-    auto containsStart = [](const uint8_t* buffer, size_t len, time_t start) -> bool {
-        size_t pos = 0;
-        while (pos < len) {
-            // find ';'
-            const uint8_t* sep = (const uint8_t*)memchr(&buffer[pos], ';', len - pos);
-            if (sep == nullptr) {
-                break;
-            }
-            time_t t = atoi((const char*)(&buffer[pos])); // time
-            if (t >= start) {
-                return true;
-            }
-            pos = (sep - buffer) + 1;
-        }
-        return false;
-    };
+        //MessageOutput.printf("responseFiller 0x%X maxLen:%d, alreadySent:%d, start:%ld\r\n", serial, maxLen, alreadySent, time_start);
 
+        auto findStart = [](uint8_t* buffer, size_t len, time_t start) -> long {
+            uint8_t* act = buffer;
+            uint8_t* end = buffer + len;
 
-    // ignore length here (max 24h)
-    // restriction on start & length: start is beginning of a day, length is not longer that 24h
-    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-
-
-        size_t ret = _file.readBytes((char*)buffer, maxLen);
-#if 0
-        bool bStartFound = false;
-
-
-        uint8_t* lastLineEnd = nullptr;
-
-        for(size_t i = 0; i < ret; i++) {
-            if(buffer[i] == ';' && lastLineEnd != nullptr)
+            bool lastNewLine = true;
+            while (act < end)
             {
-                time_t t = atoi((char*)lastLineEnd + 1); // time
-                if(t >= start)
+                switch (*act)
                 {
-
+                case '\r':
+                case '\n':
+                    lastNewLine = true;
+                    break;
+                case ';':
+                    break;
+                default:
+                    if (lastNewLine)
+                    {
+                        lastNewLine = false;
+                        time_t t = atoi((const char*)act); // time
+                        if (t >= start) {
+                            return static_cast<long>(act - buffer);
+                        }
+                    }
+                    break;
                 }
+                act++;
+            }
+            return 0;
+        };
 
-            }
-            else if (buffer[i] == '\r') {
-                lastLineEnd = &buffer[i];
-                // remove \r
-                //memcpy(&buffer[i], &buffer[i + 1], ret - i - 1);
-                //ret--;
+        long ret = 0;
+        if(alreadySent == 0)
+        {
+            while (true)
+            {
+                ret = _file.readBytes((char*)buffer, maxLen);
+                if (ret == 0)
+                {
+                    // error, file end
+                    MessageOutput.printf("file close 1\r\n");
+                    if(_fileOpen)
+                    {
+                        _fileOpen = false;
+                        _file.close();
+                        _mutex.unlock();
+                    }
+                    return ret;
+                }
+                long start = findStart(buffer, ret, time_start); // maybe one incomplete line -> ignored
+                if (start == 0)
+                {
+                    break; // 24h mode
+                }
+                else if (start > 0)
+                {
+                    // found, move file pointer back to start
+                    _file.seek(_file.position() - (ret - start));
+                    ret = _file.readBytes((char*)buffer, maxLen);
+                    break; // OK
+                }
             }
         }
-        /*
-        if (!file.printf("%ld;%.2f\n", time, value)) {
-            MessageOutput.println("SD card: Append failed");
+        else
+        {
+            ret = _file.readBytes((char*)buffer, maxLen);
         }
-        */
-        /*if (act->time > start + length) {
+
+        ret = (ret < 0) ? 0 : ret;
+
+        if (ret < maxLen) {
+            if(_fileOpen)
+            {
+                _fileOpen = false;
+                _file.close();
                 _mutex.unlock();
-                break;
             }
-*/
-#endif
-
-        if (ret == 0) {
-            _file.close();
-            _mutex.unlock();
         }
         return ret;
     };
 
+    // ignore length here (max 24h)
+    // restriction on start & length: start is beginning of a day, length is not longer that 24h
     if (_state != SDCardState_t::InitOk) {
         MessageOutput.println("SD card: getFile invalid state.");
         return false;
     }
 
-    if (!openFile(serial, start, FILE_READ, _file)) {
+    if (!openFile(serial, time_start, FILE_READ, _file)) {
         return false;
     }
 
     _mutex.lock();
+    _fileOpen = true;
+
     return true;
 }
 

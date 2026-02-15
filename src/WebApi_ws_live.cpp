@@ -218,6 +218,7 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
 
             response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
                 int send = responseFiller(buffer, maxLen, alreadySent);
+                //MessageOutput.printf("WebApi_ws_live: responseFiller returned %d bytes\r\n", send);
                 if(send == 0) {
                     _mutexFileReponse.unlock();
                 }
