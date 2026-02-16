@@ -87,10 +87,8 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
                 break;
             }
             // e.g. 1766675463;19.12\n
-            //int written = snprintf((char*)entryBuffer, sizeof(entryBuffer), "%ld;%.2f\n", act->time, act->value);
             int written = snprintf((char*)&buffer[ret], EntrySize, "%ld;%.2f\n", act->time, act->value);
             ret += written;
-            buffer[written - 1] = '\n';
         }
 
         if (ret == 0) {

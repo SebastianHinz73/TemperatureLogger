@@ -216,8 +216,8 @@ export default defineComponent({
         async fetchBinaryData(serial: string): Promise<DataPoint[]> {
             let points: DataPoint[] = [];
 
-            const startOfDay = new Date();
-            startOfDay.setHours(0,0,0,0);
+            //const startOfDay = new Date();
+            //startOfDay.setHours(0,0,0,0);
 
             return new Promise((resolve) => {
                 fetch('/api/livedata/graphdata?id=' + serial + '&start=' + this.start.getTime() / 1000 + '&length=' + this.length, { headers: authHeader() })
