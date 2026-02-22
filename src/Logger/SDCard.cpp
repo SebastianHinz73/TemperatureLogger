@@ -104,7 +104,7 @@ bool SDCardClass::getFile(uint16_t serial, time_t time_start, uint32_t length, R
                 case ';':
                     break;
                 default:
-                    if (lastNewLine)
+                    if (lastNewLine && (end - act > 11)) // e.g. 1771715258;33.19
                     {
                         lastNewLine = false;
                         time_t t = atoi((const char*)act); // time
@@ -116,7 +116,7 @@ bool SDCardClass::getFile(uint16_t serial, time_t time_start, uint32_t length, R
                 }
                 act++;
             }
-            return 0;
+            return -1;
         };
 
         long ret = 0;
