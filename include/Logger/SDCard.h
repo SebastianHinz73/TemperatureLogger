@@ -25,7 +25,9 @@ public:
 
     // IDataStoreDevice
     virtual void writeValue(uint16_t serial, time_t time, float value);
-    virtual bool getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller);
+    virtual bool getFile(uint16_t serial, time_t time_start, uint32_t length, ResponseFiller& responseFiller);
+    virtual bool getBackup(ResponseFiller& responseFiller) { return false; }
+    virtual bool restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final) { return false; }
 
 private:
     void loop();
@@ -40,6 +42,7 @@ private:
     SDCardState_t _state;
 
     File _file; // used by getFile
+    bool _fileOpen;
     std::mutex _mutex;
 };
 extern SDCardClass* pSDCard;

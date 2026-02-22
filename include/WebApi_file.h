@@ -4,6 +4,8 @@
 #include <ESPAsyncWebServer.h>
 #include <TaskSchedulerDeclarations.h>
 
+#define RAMDRIVE_FILENAME "ramdrive.bin"
+
 class WebApiFileClass {
 public:
     void init(AsyncWebServer& server, Scheduler& scheduler);

@@ -24,16 +24,33 @@
                             <td>{{ file.name }}</td>
                             <td>{{ $n(file.size, 'byte') }}</td>
                             <td>
-                                <a href="#" class="icon text-danger" :title="$t('fileadmin.Delete')">
+                                <a href="#" v-if="!file.data_backup" class="icon text-danger" :title="$t('fileadmin.Delete')">
                                     <BIconTrash v-on:click="onOpenModal(modalDelete, file)" /> </a
                                 >&nbsp;
                                 <a href="#" class="icon" :title="$t('fileadmin.Download')">
-                                    <BIconDownload v-on:click="downloadFile(file.name)" />
-                                </a>
+                                    <BIconDownload v-on:click="!file.data_backup ? downloadFile(file.name) : downloadRamDrive(file.name)" />
+                                </a>&nbsp;
+                                <a href="#" v-if="file.data_backup" class="icon" :title="$t('fileadmin.Upload')">
+                                    <BIconUpload v-on:click="uploadRamDrive" /> </a
+                                >
                             </td>
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            <div v-if="ramdriveLoading" class="mb-3">
+                <div class="progress">
+                    <div
+                        class="progress-bar"
+                        role="progressbar"
+                        :style="{ width: ramdriveProgress + '%' }"
+                        v-bind:aria-valuenow="ramdriveProgress"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    >
+                        {{ ramdriveProgress }}%
+                    </div>
+                </div>
             </div>
         </CardElement>
 
@@ -151,6 +168,7 @@ import {
     BIconArrowLeft,
     BIconCheckCircle,
     BIconDownload,
+    BIconUpload,
     BIconExclamationCircleFill,
     BIconTrash,
 } from 'bootstrap-icons-vue';
@@ -165,6 +183,7 @@ export default defineComponent({
         BIconArrowLeft,
         BIconCheckCircle,
         BIconDownload,
+        BIconUpload,
         BIconExclamationCircleFill,
         BIconTrash,
     },
@@ -200,6 +219,9 @@ export default defineComponent({
                 },
             ],
             isValidJson: false,
+            // ramdrive upload/download state
+            ramdriveLoading: false,
+            ramdriveProgress: 0,
         };
     },
     mounted() {
@@ -231,6 +253,64 @@ export default defineComponent({
                     a.click();
                     a.remove();
                 });
+        },
+        downloadRamDrive(filename: string) {
+            // Use XMLHttpRequest to get download progress events
+            this.ramdriveLoading = true;
+            this.ramdriveProgress = 0;
+            const request = new XMLHttpRequest();
+            request.responseType = 'blob';
+
+            request.addEventListener('load', () => {
+                if (request.status === 200) {
+                    const blob = request.response as Blob;
+                    const fileUrl = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = fileUrl;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    window.URL.revokeObjectURL(fileUrl);
+                } else {
+                    // show error in alert
+                    this.alert.message = `[HTTP ERROR] ${request.status}: ${request.statusText}`;
+                    this.alert.type = 'danger';
+                    this.alert.show = true;
+                }
+                this.ramdriveLoading = false;
+                this.ramdriveProgress = 0;
+            });
+
+            request.addEventListener('error', () => {
+                this.alert.message = this.$t('fileadmin.DownloadFailed') as string;
+                this.alert.type = 'danger';
+                this.alert.show = true;
+                this.ramdriveLoading = false;
+                this.ramdriveProgress = 0;
+            });
+
+            request.addEventListener('abort', () => {
+                this.ramdriveLoading = false;
+                this.ramdriveProgress = 0;
+            });
+
+            request.addEventListener('progress', (e: ProgressEvent) => {
+                if (e.lengthComputable) {
+                    this.ramdriveProgress = Math.trunc((e.loaded / e.total) * 100);
+                } else {
+                    // fallback: show some activity - treat as indeterminate -> keep at 0.. we could animate but keep simple
+                    this.ramdriveProgress = 0;
+                }
+            });
+
+            request.withCredentials = true;
+            request.open('GET', '/api/livedata/backup');
+            // set auth headers
+            authHeader().forEach((value, key) => {
+                request.setRequestHeader(key, value);
+            });
+            request.send();
         },
         callFileApiEndpoint(endpoint: string, jsonData: string) {
             const formData = new FormData();
@@ -364,6 +444,78 @@ export default defineComponent({
             this.UploadError = '';
             this.UploadSuccess = false;
             this.getFileList();
+        },
+        uploadRamDrive() {
+            // open a file picker and upload selected file to the device (restore ramdrive)
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '*/*';
+            input.addEventListener('change', () => {
+                if (!input.files || !input.files[0]) {
+                    return;
+                }
+
+                const file = input.files[0];
+
+                this.ramdriveLoading = true;
+                this.ramdriveProgress = 0;
+
+                const request = new XMLHttpRequest();
+
+                request.addEventListener('load', () => {
+                    if (request.status === 200) {
+                        this.alert.message = this.$t('fileadmin.UploadSuccess') as string;
+                        this.alert.type = 'success';
+                        this.alert.show = true;
+                        // trigger refresh
+                        this.getFileList();
+                    } else {
+                        this.alert.message = `[HTTP ERROR] ${request.status}: ${request.statusText}`;
+                        this.alert.type = 'danger';
+                        this.alert.show = true;
+                    }
+                    this.ramdriveLoading = false;
+                    this.ramdriveProgress = 0;
+                });
+
+                request.addEventListener('error', () => {
+                    this.alert.message = this.$t('fileadmin.UploadFailed') as string;
+                    this.alert.type = 'danger';
+                    this.alert.show = true;
+                    this.ramdriveLoading = false;
+                    this.ramdriveProgress = 0;
+                });
+
+                request.addEventListener('abort', () => {
+                    this.ramdriveLoading = false;
+                    this.ramdriveProgress = 0;
+                });
+
+                request.upload.addEventListener('progress', (e: ProgressEvent) => {
+                    if (e.lengthComputable) {
+                        this.ramdriveProgress = Math.trunc((e.loaded / e.total) * 100);
+                    } else {
+                        this.ramdriveProgress = 0;
+                    }
+                });
+
+                request.withCredentials = true;
+
+                request.open('POST', '/api/livedata/backup');
+                // set auth headers
+                authHeader().forEach((value, key) => {
+                    request.setRequestHeader(key, value);
+                });
+
+                // send the file as multipart/form-data to trigger server-side upload callbacks
+                const formData = new FormData();
+                // use field name 'file' so server upload handler receives it in onUpload
+                formData.append('file', file, file.name);
+                request.send(formData);
+            });
+
+            // trigger file picker
+            input.click();
         },
         onFactoryResetModal() {
             this.modalFactoryReset.show();

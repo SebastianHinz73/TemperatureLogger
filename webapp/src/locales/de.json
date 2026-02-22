@@ -538,6 +538,7 @@
         "ResetMsg": "Sind Sie sicher, dass Sie die aktuelle Konfiguration löschen und alle Einstellungen auf die Werkseinstellungen zurücksetzen möchten?",
         "ResetConfirm": "Werksreset!",
         "Download": "Herunterladen",
+        "Upload": "Hochladen",
         "Delete": "Löschen",
         "DeleteMsg": "Sind Sie sicher, dass Sie die Datei löschen wollen: '{name}'? Es muss manuell neu gestartet werden um die Konfigurationsänderungen zu übernehmen!",
         "Name": "Name",

@@ -17,12 +17,7 @@ size_t RamDriveClass::_cacheSize = 0;
 RamDriveClass::RamDriveClass()
 {
     _ramBuffer = new RamBuffer(_ramDrive, _ramDriveSize, _cache, _cacheSize);
-    if (!_ramBuffer->IntegrityCheck()) {
-        MessageOutput.printf("Initialize empty RamDrive with %d entries. ", _ramBuffer->getTotalElements());
-        _ramBuffer->PowerOnInitialize();
-    } else {
-        MessageOutput.printf("Initialize RamDrive. %d entries found. %.2f percent used. ", _ramBuffer->getUsedElements(), _ramBuffer->getUsedElements() * 100.0f / _ramBuffer->getTotalElements());
-    }
+    startupCheck();
 }
 
 void RamDriveClass::AllocateRamDrive()
@@ -62,13 +57,19 @@ void RamDriveClass::FreeRamDrive()
 
 void RamDriveClass::writeValue(uint16_t serial, time_t time, float value)
 {
-    std::lock_guard<std::mutex> lock(_mutex);
-    _ramBuffer->writeValue(serial, time, value);
+    if(_mutexRamDrive.TryLock(0, 100))
+    {
+        _ramBuffer->writeValue(serial, time, value);
+        _mutexRamDrive.unlock();
+    }
 }
 
 bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
 {
-    _mutex.lock();
+    if(!_mutexRamDrive.TryLock(100, 1500))
+    {
+        return false;
+    }
 
     static dataEntry_t* act;
     act = nullptr;
@@ -76,30 +77,69 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
     responseFiller = [&, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
 
-        //MessageOutput.printf("RamDriveClass::getFile 0x%X responseFiller maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
+        //MessageOutput.printf("responseFiller 0x%X, maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
         const int EntrySize = 20; // typically entry count 17
         while (maxLen - ret > EntrySize) {
             if (!_ramBuffer->getEntry(serial, start, act)) {
                 break;
             }
             if (act->time > start + length) {
-                _mutex.unlock();
                 break;
             }
             // e.g. 1766675463;19.12\n
             int written = snprintf((char*)&buffer[ret], EntrySize, "%ld;%.2f\n", act->time, act->value);
-            buffer[written - 1] = '\n';
-
             ret += written;
         }
 
         if (ret == 0) {
-            _mutex.unlock();
+            _mutexRamDrive.unlock();
+        } else { // important to fill the buffer completely, otherwise chunked response ends too early
+            for(; ret < maxLen; ret++) {
+                buffer[ret] = (ret == maxLen - 1) ? '\n' : ' ';
+            }
         }
         return ret;
     };
-
     return true;
+}
+
+bool RamDriveClass::getBackup(ResponseFiller& responseFiller)
+{
+    if(_mutexRamDrive.TryLock(100, 20000))
+    {
+        return _ramBuffer->getBackup(responseFiller);
+    }
+    return false;
+}
+
+bool RamDriveClass::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final)
+{
+    if(alreadyWritten == 0)
+    {
+        if(!_mutexRamDrive.TryLock(100, 20000))
+        {
+            return false;
+        }
+    }
+
+    bool rc = _ramBuffer->restoreBackup(alreadyWritten, data, len, final);
+
+    if(final)
+    {
+        startupCheck();
+        _mutexRamDrive.unlock();
+    }
+    return rc;
+}
+
+void RamDriveClass::startupCheck()
+{
+    if (!_ramBuffer->IntegrityCheck()) {
+        MessageOutput.printf("Initialize empty RamDrive with %d entries. ", _ramBuffer->getTotalElements());
+        _ramBuffer->PowerOnInitialize();
+    } else {
+        MessageOutput.printf("Initialize RamDrive. %d entries found. %.2f percent used. ", _ramBuffer->getUsedElements(), _ramBuffer->getUsedElements() * 100.0f / _ramBuffer->getTotalElements());
+    }
 }
 
 time_t RamDriveClass::getStartOfDay(const tm& timeinfo)

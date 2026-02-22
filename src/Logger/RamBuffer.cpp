@@ -63,6 +63,7 @@ bool RamBuffer::IntegrityCheck()
                 return false;
             }
 
+            //MessageOutput.printf("%x, %ld, %05.2f\r\n", act->serial, act->time, act->value);
             act++;
         }
         act = _header->start;
@@ -77,7 +78,7 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
     _header->last->serial = serial;
     _header->last->time = time;
     _header->last->value = value;
-    // MessageOutput.printf("writeValue: ## %d: 0x%x, (%d, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
+     MessageOutput.printf("writeValue: ## %d: 0x%x, (%ld, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
 
     _header->last++;
 
@@ -134,4 +135,77 @@ bool RamBuffer::getEntry(uint16_t serial, time_t time, dataEntry_t*& act)
         act = _header->start; // start again with _header->start
     }
     return false;
+}
+
+bool RamBuffer::getBackup(ResponseFiller& responseFiller)
+{
+    static uint8_t* act = nullptr;
+
+    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+        size_t ret = 0;
+        if(alreadySent == 0) {
+            act = static_cast<uint8_t*>(static_cast<void*>(_header->first));
+        }
+
+        size_t actLen = 0;
+
+        // copy from first to end
+        if (act < static_cast<uint8_t*>(static_cast<void*>(_header->end))) {
+            actLen = min(maxLen, static_cast<size_t>(static_cast<uint8_t*>(static_cast<void*>(_header->end)) - act));
+
+            memcpy(buffer, act, actLen);
+            ret += actLen;
+            act += actLen;
+            buffer += actLen;
+            if(act == static_cast<uint8_t*>(static_cast<void*>(_header->end))) {
+                act = static_cast<uint8_t*>(static_cast<void*>(_header->start));
+            }
+        }
+        // copy from start to last
+        actLen = maxLen - actLen;
+        if(actLen > 0) {
+            actLen = min(actLen, static_cast<size_t>(static_cast<uint8_t*>(static_cast<void*>(_header->last)) - act));
+
+            memcpy(buffer, act, actLen);
+            ret += actLen;
+            act += actLen;
+        }
+        return ret;
+    };
+    return true;
+}
+
+bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final)
+{
+    static uint8_t* act = nullptr;
+
+    if(alreadyWritten == 0) {
+        PowerOnInitialize();
+        act = static_cast<uint8_t*>(static_cast<void*>(_header->first));
+    }
+
+    if(alreadyWritten + len > _elements * sizeof(dataEntry_t)) {
+        MessageOutput.printf("RamBuffer::restoreBackup overflow alreadyWritten=%d, len=%d, max=%d\r\n", alreadyWritten, len, _elements * sizeof(dataEntry_t));
+        return false;
+    }
+
+    memcpy(act, data, len);
+    act += len;
+
+    if(final) {
+        // adjust _header->last
+        size_t entries = (alreadyWritten + len) / sizeof(dataEntry_t);
+        _header->last = _header->first + entries;
+        MessageOutput.printf("RamBuffer::restoreBackup final entries=%d, first=%d, last=%d\r\n", entries, toIndex(_header->first), toIndex(_header->last));
+    }
+
+    if (_cache != nullptr) {
+        // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
+        uint32_t sum = 0;
+        for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
+            sum += ((uint32_t*)_cache)[i];
+        }
+        // MessageOutput.printf("sum %d\r\n", sum);
+    }
+    return true;
 }

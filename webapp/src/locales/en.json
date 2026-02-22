@@ -538,6 +538,7 @@
         "ResetMsg": "Are you sure you want to delete the current configuration and reset all settings to their factory defaults?",
         "ResetConfirm": "Factory Reset!",
         "Download": "Download",
+        "Upload": "Upload",
         "Delete": "Delete",
         "DeleteMsg": "Are you sure you want to delete file: '{name}'? You have to manually reboot the device to apply config changes!",
         "Name": "Name",

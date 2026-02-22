@@ -4,6 +4,7 @@
  */
 #include "WebApi_file.h"
 #include "Configuration.h"
+#include "Logger\RamDrive.h"
 #include "RestartHelper.h"
 #include "Utils.h"
 #include "WebApi.h"
@@ -48,10 +49,18 @@ void WebApiFileClass::onFileListGet(AsyncWebServerRequest* request)
         JsonObject obj = data.add<JsonObject>();
         obj["name"] = String(file.name());
         obj["size"] = file.size();
+        obj["data_backup"] = false;
 
         file = rootfs.openNextFile();
     }
     file.close();
+
+    if (pRamDrive != nullptr) {
+        JsonObject obj = data.add<JsonObject>();
+        obj["name"] = String(RAMDRIVE_FILENAME);
+        obj["size"] = pRamDrive->getUsedBytes();
+        obj["data_backup"] = true;
+    }
 
     WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
 }
