@@ -85,6 +85,7 @@ bool ConfigurationClass::write()
         JsonObject sensor = sensors[i].to<JsonObject>();
         sensor["serial"] = config.DS18B20.Sensors[i].Serial;
         sensor["name"] = config.DS18B20.Sensors[i].Name;
+        sensor["visible"] = config.DS18B20.Sensors[i].Visible;
     }
 
     JsonObject mqtt_lwt = mqtt["lwt"].to<JsonObject>();
@@ -241,6 +242,7 @@ bool ConfigurationClass::read()
         JsonObject sensor = sensors[i].as<JsonObject>();
         config.DS18B20.Sensors[i].Serial = sensor["serial"] | 0U;
         strlcpy(config.DS18B20.Sensors[i].Name, sensor["name"] | "undefined", sizeof(config.DS18B20.Sensors[i].Name));
+        config.DS18B20.Sensors[i].Visible = sensor["visible"] | true;
     }
     JsonObject mqtt_lwt = mqtt["lwt"];
 

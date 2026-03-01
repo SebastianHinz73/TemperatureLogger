@@ -37,6 +37,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminGet(AsyncWebServerRequest* request)
             JsonObject sensor = sensors[i].to<JsonObject>();
             sensor["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
             sensor["connected"] = Datastore.validSensor(config.DS18B20.Sensors[i].Serial);
+            sensor["visible"] = config.DS18B20.Sensors[i].Visible;
             sensor["name"] = config.DS18B20.Sensors[i].Name;
         }
     }
@@ -103,7 +104,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
             break;
         }
 
-        if (!(sensor["serial"].is<String>() && sensor["connected"].is<bool>() && sensor["name"].is<String>() && strlen(sensor["name"]) > 0)) {
+        if (!(sensor["serial"].is<String>() && sensor["connected"].is<bool>() && sensor["visible"].is<bool>() && sensor["name"].is<String>() && strlen(sensor["name"]) > 0)) {
             retMsg["message"] = "Values are missing!";
             retMsg["code"] = WebApiError::GenericValueMissing;
             WebApi.sendJsonResponse(request, response, __FUNCTION__, __LINE__);
@@ -123,6 +124,7 @@ void WebApiTempLoggerClass::onTempLoggerAdminPost(AsyncWebServerRequest* request
                 String s = sensor["serial"];
                 config.DS18B20.Sensors[i].Serial = strtoull(s.c_str(), 0, 16);
                 strlcpy(config.DS18B20.Sensors[i].Name, sensor["name"], sizeof(config.DS18B20.Sensors[i].Name));
+                config.DS18B20.Sensors[i].Visible = sensor["visible"].as<bool>();
             } else {
                 // reset unused
                 config.DS18B20.Sensors[i].Serial = 0;

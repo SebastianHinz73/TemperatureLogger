@@ -509,6 +509,7 @@
         "DS18B20Fahrenheit": "Mesure en °F:",
         "Seconds": "Seconds",
         "DeleteSensor": "Supprimer le capteur",
+        "SensorVisible": "Capteur visible",
         "EditSensor": "Modifier le capteur",
         "Cancel": "@:maintenancereboot.Cancel",
         "Save": "@:base.Save",

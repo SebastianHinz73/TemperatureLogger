@@ -1,8 +1,8 @@
 <template>
     <div class="row row-cols-3 row-cols-md-5 g-2">
-        <div v-for="sensor in config" :key="sensor.serial">
+        <div v-for="sensor in visibleSensors" :key="sensor.serial">
             <div class="card">
-                <div class="card-header" :class="{ 'text-bg-success': sensor.valid, 'text-bg-danger': !sensor.valid }">{{
+                <div class="card-header" :class="{ 'text-bg-success': sensor.connected, 'text-bg-danger': !sensor.connected }">{{
                     sensor.name
                 }}</div>
                 <div class="card-body card-text text-center">
@@ -21,6 +21,11 @@ export default defineComponent({
     props: {
         config: { type: Object as PropType<Config[]>, required: true },
         updates: { type: Object as PropType<Update[]>, required: true },
+    },
+    computed: {
+        visibleSensors() {
+            return this.config.filter(s => !!s.visible);
+        },
     },
     methods: {
         getSensor(sensor: Config): number {

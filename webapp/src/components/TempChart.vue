@@ -275,7 +275,7 @@ export default defineComponent({
             let sets: IDatasets[] = [];
             for (let i = 0; i < this.sensors.length; i++) {
                 const sensor = this.toConfigObject(this.sensors, i);
-                if(!sensor.valid) {
+                if(!sensor.connected || !sensor.visible) {
                     continue;
                 }
 
@@ -342,14 +342,16 @@ export default defineComponent({
                 let set: Config = {
                     serial: obj.serial,
                     name: obj.name,
-                    valid: obj.valid,
+                    connected: obj.connected,
+                    visible: obj.visible,
                 };
                 return set;
             }
             let set: Config = {
                     serial: 0,
                     name: "",
-                    valid: false,
+                    connected: false,
+                    visible: false,
                 };
             return set;
         },

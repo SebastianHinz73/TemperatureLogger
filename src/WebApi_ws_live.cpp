@@ -131,14 +131,15 @@ void WebApiWsLiveClass::generateJsonResponse(JsonVariant& root)
         }
         uint32_t time;
         float value;
-        bool valid = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
+        bool connected = Datastore.getTemperature(config.DS18B20.Sensors[i].Serial, time, value);
 
         JsonObject tempObj = arrayConfig[i].to<JsonObject>();
-        tempObj["valid"] = valid;
+        tempObj["connected"] = connected;
+        tempObj["visible"] = config.DS18B20.Sensors[i].Visible;
         tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
         tempObj["name"] = config.DS18B20.Sensors[i].Name;
 
-        if(valid) {
+        if(connected) {
             tempObj = arrayUpdates[indexUpdates++].to<JsonObject>();
             tempObj["serial"] = String(config.DS18B20.Sensors[i].Serial, 16);
             tempObj["value"] = value;
