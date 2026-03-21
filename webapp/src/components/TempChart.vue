@@ -20,9 +20,9 @@
                 <label class="btn btn-outline-success" for="btnradio4">24h</label>
             </div>
             <div class="btn-group ms-1" role="group" aria-label="Zoom button group">
-                <button type="button" class="btn btn-outline-success" :disabled="IsDisabled()" @click="ZoomIn">Zoom In</button>
-                <button type="button" class="btn btn-outline-success" :disabled="IsDisabled()" @click="ZoomOut">Zoom Out</button>
-                <button type="button" class="btn btn-outline-secondary" :disabled="IsDisabled()" @click="ResetZoom">Reset</button>
+                <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="ZoomIn">Zoom In</button>
+                <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="ZoomOut">Zoom Out</button>
+                <button type="button" class="btn btn-outline-secondary" :disabled="IsLoading()" @click="ResetZoom">Reset</button>
             </div>
         </div>
         <div class="card-body card-text text-center">
@@ -192,20 +192,22 @@ export default defineComponent({
     created() {
         this.SetTimescale(0.5);
     },
-    mounted() {
-        let datepicker = this.$refs.startDate as HTMLInputElement
-        datepicker.addEventListener('change',(e: any)=>{
-            const el = e.target.value.split('-');
-            var now = new Date(el[0], el[1]-1, el[2], 0, 0, 0, 0);
-            //console.log(now.getTime() / 1000);
-            this.start = now;
-            this.length = 24*60*60;
-            this.fetchData();
-        })
+        mounted() {
+            let datepicker = this.$refs.startDate as HTMLInputElement
+            datepicker.addEventListener('change', async (e: any) => {
+                const el = e.target.value.split('-');
+                var now = new Date(el[0], el[1]-1, el[2], 0, 0, 0, 0);
+                //console.log(now.getTime() / 1000);
+                this.start = now;
+                this.length = 24*60*60;
+                // ensure data is fetched and then update/reset zoom limits to match new day
+                await this.fetchData();
+                this.ResetZoom();
+            })
 
-        const today = new Date();
-        datepicker.value = today.toISOString().slice(0, 10);
-    },
+            const today = new Date();
+            datepicker.value = today.toISOString().slice(0, 10);
+        },
     unmounted() {
     },
     computed: {
@@ -321,10 +323,11 @@ export default defineComponent({
             }
             this.configData = sets;
         },
-        SetTimescale(scale: number) {
+        async SetTimescale(scale: number) {
             const now = new Date();
             switch (scale) {
                 case 24:
+                    // set to start of day
                     now.setHours(0,0,0,0);
                     this.start = now;
                     this.length = 24*60*60;
@@ -334,13 +337,19 @@ export default defineComponent({
                     this.start = new Date(now.getTime() - this.length * 1000);
                     break;
             }
-            this.fetchData();
+            // wait for data to be fetched so the chart exists / has data
+            await this.fetchData();
+            // reset zoom to the full (and clamped) range for the new timescale
+            this.ResetZoom();
         },
         IsTimescale(scale: number) {
             if(scale*60*60 == this.length) {
                 return true;
             }
             return false;
+        },
+        IsLoading() {
+            return this.dataLoading;
         },
         IsDisabled() {
             if(this.dataLoading){
@@ -378,20 +387,8 @@ export default defineComponent({
             const newMin = center - width / 2;
             const newMax = center + width / 2;
 
-            //chart.options = chart.options || {};
-            //chart.options.scales = chart.options.scales || {};
-            ///chart.options.scales.x = chart.options.scales.x || {};
-            chart.options.scales.x.min = newMin;
-            chart.options.scales.x.max = newMax;
-/*
-            // Update ohne Animation
-            try {
-                chart.update('none');
-            } catch (e) {
-                // some vue-chartjs wrappers expose the chart instance differently
-                // ignore failures silently
-                console.warn('Chart update failed', e);
-            }*/
+            // apply with clamping to full day range
+            this.setZoomLimits(newMin, newMax);
         },
 
         ZoomIn() {
@@ -403,25 +400,52 @@ export default defineComponent({
         },
 
         ResetZoom() {
+            const fullMin = this.start ? this.start.getTime() / 1000 : undefined;
+            const fullMax = (fullMin !== undefined) ? (fullMin + this.length) : undefined;
+
+            if (fullMin !== undefined && fullMax !== undefined) {
+                this.setZoomLimits(fullMin, fullMax);
+            } else {
+                // fallback to plugin resetZoom if available
+                const chart = this.getChartInstance();
+                if (chart && typeof chart.resetZoom === 'function') {
+                    try { chart.resetZoom(); } catch (e) { console.warn(e); }
+                }
+            }
+        },
+
+        // Ensure provided min/max are clamped to the available full range (start..start+length)
+        setZoomLimits(min: number, max: number) {
             const chart = this.getChartInstance();
             if (!chart) return;
 
             const fullMin = this.start ? this.start.getTime() / 1000 : undefined;
             const fullMax = (fullMin !== undefined) ? (fullMin + this.length) : undefined;
 
-            if (fullMin !== undefined && fullMax !== undefined) {
-                //chart.options = chart.options || {};
-                //chart.options.scales = chart.options.scales || {};
-                //chart.options.scales.x = chart.options.scales.x || {};
-                chart.options.scales.x.min = fullMin;
-                chart.options.scales.x.max = fullMax;
-                //try { chart.update('none'); } catch (e) { console.warn(e); }
-            } else {
-                // fallback to plugin resetZoom if available
-                //if (typeof chart.resetZoom === 'function') {
-                //    try { chart.resetZoom(); } catch (e) { console.warn(e); }
-                //}
+            if (fullMin === undefined || fullMax === undefined) {
+                // nothing to clamp against
+                chart.options.scales.x.min = min;
+                chart.options.scales.x.max = max;
+                try { chart.update('none'); } catch (e) { /* ignore */ }
+                return;
             }
+
+            // clamp
+            let clampedMin = Math.max(min, fullMin);
+            let clampedMax = Math.min(max, fullMax);
+
+            // Ensure we don't invert or make an empty range; if requested range wider than full range, use full range
+            if (clampedMin >= clampedMax) {
+                clampedMin = fullMin;
+                clampedMax = fullMax;
+            }
+
+            //chart.options = chart.options || {};
+            //chart.options.scales = chart.options.scales || {};
+            //chart.options.scales.x = chart.options.scales.x || {};
+            chart.options.scales.x.min = clampedMin;
+            chart.options.scales.x.max = clampedMax;
+            try { chart.update('none'); } catch (e) { /* ignore */ }
         },
 
         getChartInstance(): any {
