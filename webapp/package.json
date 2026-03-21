@@ -17,6 +17,7 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons-vue": "^1.11.3",
     "chart.js": "^4.4.7",
+    "chartjs-plugin-zoom": "2.2.0",
     "mitt": "^3.0.1",
     "sortablejs": "^1.15.6",
     "spark-md5": "^3.0.2",

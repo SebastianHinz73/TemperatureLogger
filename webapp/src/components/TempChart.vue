@@ -1,5 +1,5 @@
 <template>
-    <div class="card">
+    <div class="card" >
         <div class="card-header" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
             <div class="justify-content-center align-self-center">
                 Date: <input ref="startDate" class="form-control-sm ms-2" type="date" />
@@ -19,11 +19,18 @@
                 <input ref="duration24" type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" :checked="IsTimescale(24)" :disabled="IsDisabled()" @click="SetTimescale(24)">
                 <label class="btn btn-outline-success" for="btnradio4">24h</label>
             </div>
+            <div class="btn-group ms-1" role="group" aria-label="Zoom button group">
+                <button type="button" class="btn btn-outline-success" :disabled="IsDisabled()" @click="ZoomIn">Zoom In</button>
+                <button type="button" class="btn btn-outline-success" :disabled="IsDisabled()" @click="ZoomOut">Zoom Out</button>
+                <button type="button" class="btn btn-outline-secondary" :disabled="IsDisabled()" @click="ResetZoom">Reset</button>
+            </div>
         </div>
         <div class="card-body card-text text-center">
             <div
                 class="row row-cols-1 row-cols-md-3 g-3">
-                <Scatter :data="chartData" :options="chartOptions" />
+                <Scatter ref="tempChart" :data="chartData" :options="chartOptions"/>
+  <!--              <Scatter :data="chartData" :options="chartOptions" :style="{ height: '400px', width: '100%', position:'relative' }"/>
+-->
             </div>
         </div>
     </div>
@@ -46,9 +53,12 @@ import {
     Tooltip,
     Legend,
 } from 'chart.js';
+import type { ChartOptions } from 'chart.js';
+import zoomPlugin from 'chartjs-plugin-zoom';
 import { Scatter } from 'vue-chartjs';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(zoomPlugin);
 
 interface IDatasets {
     serial: string;
@@ -146,23 +156,39 @@ export default defineComponent({
                     legend: {
                         display: true,
                     },
-                },
-/*                tooltips: {
-                    usePointStyle: true,
-                    callbacks: {
-                        labelPointStyle: function(context) {
-                            return {
-                                pointStyle: 'triangle',
-                                rotation: 0
-                            };
-                        }
+                    tooltip: {
+                        callbacks: {
+                            label: function (context: any) {
+                                // X als Unix-Sekunden -> in ms umwandeln
+                                const ts = context.parsed?.x ?? context.raw?.x ?? 0;
+                                const d = new Date(ts * 1000);
+                                const hh = ("0" + d.getHours()).slice(-2);
+                                const mm = ("0" + d.getMinutes()).slice(-2);
+                                const ss = ("0" + d.getSeconds()).slice(-2);
+                                const y = context.parsed?.y ?? context.raw?.y ?? '';
+                                return `${hh}:${mm}:${ss} — ${y}`;
+                            },
+                        },
                     },
-                },*/
-            },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true,
+                            },
+                            mode: 'x',
+                        },
+                    },
+                },
+            } as ChartOptions<'scatter'>,
         };
     },
-    // https://medium.com/risan/vue-chart-component-with-chart-js-db85a2d21288
-    // https://www.chartjs.org/docs/latest/configuration/tooltip.html#label-callback
     created() {
         this.SetTimescale(0.5);
     },
@@ -334,6 +360,73 @@ export default defineComponent({
                 return true;
             }
             return false;
+        },
+        SetZoom(scale: number) {
+            const chart = this.getChartInstance();
+            if (!chart) return;
+
+            // Versuche aktuelle Achsengrenzen zu ermitteln; fallback auf full range
+            const xScale = chart.scales?.x;
+            const fallbackMin = this.start ? this.start.getTime() / 1000 : undefined;
+            const fallbackMax = (fallbackMin !== undefined) ? (fallbackMin + this.length) : undefined;
+
+            const min = xScale?.min ?? fallbackMin ?? 0;
+            const max = xScale?.max ?? fallbackMax ?? (min + this.length || 3600);
+
+            const center = (min + max) / 2;
+            const width = (max - min) * scale; // scale <1 = reinzoomen, >1 = rauszoomen
+            const newMin = center - width / 2;
+            const newMax = center + width / 2;
+
+            //chart.options = chart.options || {};
+            //chart.options.scales = chart.options.scales || {};
+            ///chart.options.scales.x = chart.options.scales.x || {};
+            chart.options.scales.x.min = newMin;
+            chart.options.scales.x.max = newMax;
+/*
+            // Update ohne Animation
+            try {
+                chart.update('none');
+            } catch (e) {
+                // some vue-chartjs wrappers expose the chart instance differently
+                // ignore failures silently
+                console.warn('Chart update failed', e);
+            }*/
+        },
+
+        ZoomIn() {
+            this.SetZoom(0.5);
+        },
+
+        ZoomOut() {
+            this.SetZoom(2);
+        },
+
+        ResetZoom() {
+            const chart = this.getChartInstance();
+            if (!chart) return;
+
+            const fullMin = this.start ? this.start.getTime() / 1000 : undefined;
+            const fullMax = (fullMin !== undefined) ? (fullMin + this.length) : undefined;
+
+            if (fullMin !== undefined && fullMax !== undefined) {
+                //chart.options = chart.options || {};
+                //chart.options.scales = chart.options.scales || {};
+                //chart.options.scales.x = chart.options.scales.x || {};
+                chart.options.scales.x.min = fullMin;
+                chart.options.scales.x.max = fullMax;
+                //try { chart.update('none'); } catch (e) { console.warn(e); }
+            } else {
+                // fallback to plugin resetZoom if available
+                //if (typeof chart.resetZoom === 'function') {
+                //    try { chart.resetZoom(); } catch (e) { console.warn(e); }
+                //}
+            }
+        },
+
+        getChartInstance(): any {
+            const chartComp: any = this.$refs.tempChart;
+            return chartComp?.chartInstance ?? chartComp?.chart ?? chartComp?.$chart ?? null;
         },
         toConfigObject(arr: Config[], index: number) : Config {
             const obj = Object.values(arr).at(index);
