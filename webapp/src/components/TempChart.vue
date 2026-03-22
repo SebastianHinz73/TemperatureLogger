@@ -6,7 +6,7 @@
             </div>
         </div>
         <div class="text-left">
-            <div class="btn-group ms-1" role="group" aria-label="Basic radio toggle button group">
+            <div class="btn-group ms-1 me-3" role="group" aria-label="Basic radio toggle button group">
                 <input ref="duration30" type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" :checked="IsTimescale(0.5)" :disabled="IsDisabled()" @click="SetTimescale(0.5)">
                 <label class="btn btn-outline-success" for="btnradio1">30min</label>
 
@@ -19,19 +19,22 @@
                 <input ref="duration24" type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" :checked="IsTimescale(24)" :disabled="IsDisabled()" @click="SetTimescale(24)">
                 <label class="btn btn-outline-success" for="btnradio4">24h</label>
             </div>
-            <div class="btn-group ms-1" role="group" aria-label="Zoom button group">
+            <div class="btn-group ms-1 me-3" role="group" aria-label="Zoom button group">
                 <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="ZoomIn">Zoom In</button>
                 <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="ZoomOut">Zoom Out</button>
                 <button type="button" class="btn btn-outline-secondary" :disabled="IsLoading()" @click="ResetZoom">Reset</button>
+            </div>
+            <div class="btn-group ms-1" role="group" aria-label="Height button group">
+                <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="IncreaseHeight(50)">Height++</button>
+                <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="DecreaseHeight(50)">Height--</button>
+                <button type="button" class="btn btn-outline-secondary" :disabled="IsLoading()" @click="ResetHeight">Reset</button>
             </div>
         </div>
         <div class="card-body card-text text-center">
             <div
                 class="row row-cols-1 row-cols-md-3 g-3">
-                <Scatter ref="tempChart" :data="chartData" :options="chartOptions"/>
-  <!--              <Scatter :data="chartData" :options="chartOptions" :style="{ height: '400px', width: '100%', position:'relative' }"/>
--->
-            </div>
+                <Scatter ref="tempChart" :data="chartData" :options="chartOptions" :style="{ height: chartHeight + 'px', width: '100%', position:'relative' }"/>
+             </div>
         </div>
     </div>
 
@@ -126,6 +129,10 @@ export default defineComponent({
             start: {} as Date,
             length: 0 as number,
 
+            // chart height in pixels (can be changed by buttons)
+            chartHeight: 400 as number,
+            defaultChartHeight: 400 as number,
+
             sensors: this.config,
 
             configData: [] as IDatasets[],
@@ -192,22 +199,22 @@ export default defineComponent({
     created() {
         this.SetTimescale(0.5);
     },
-        mounted() {
-            let datepicker = this.$refs.startDate as HTMLInputElement
-            datepicker.addEventListener('change', async (e: any) => {
-                const el = e.target.value.split('-');
-                var now = new Date(el[0], el[1]-1, el[2], 0, 0, 0, 0);
-                //console.log(now.getTime() / 1000);
-                this.start = now;
-                this.length = 24*60*60;
-                // ensure data is fetched and then update/reset zoom limits to match new day
-                await this.fetchData();
-                this.ResetZoom();
-            })
+    mounted() {
+        let datepicker = this.$refs.startDate as HTMLInputElement
+        datepicker.addEventListener('change', async (e: any) => {
+            const el = e.target.value.split('-');
+            var now = new Date(el[0], el[1]-1, el[2], 0, 0, 0, 0);
+            //console.log(now.getTime() / 1000);
+            this.start = now;
+            this.length = 24*60*60;
+            // ensure data is fetched and then update/reset zoom limits to match new day
+            await this.fetchData();
+            this.ResetZoom();
+        })
 
-            const today = new Date();
-            datepicker.value = today.toISOString().slice(0, 10);
-        },
+        const today = new Date();
+        datepicker.value = today.toISOString().slice(0, 10);
+    },
     unmounted() {
     },
     computed: {
@@ -451,6 +458,34 @@ export default defineComponent({
         getChartInstance(): any {
             const chartComp: any = this.$refs.tempChart;
             return chartComp?.chartInstance ?? chartComp?.chart ?? chartComp?.$chart ?? null;
+        },
+        // Increase chart canvas height by step (px)
+        async IncreaseHeight(step: number) {
+            this.chartHeight = Math.min(2000, this.chartHeight + step);
+            await this.applyChartHeight();
+        },
+        // Decrease chart canvas height by step (px)
+        async DecreaseHeight(step: number) {
+            this.chartHeight = Math.max(200, this.chartHeight - step);
+            await this.applyChartHeight();
+        },
+        // Reset chart canvas height to default
+        async ResetHeight() {
+            this.chartHeight = this.defaultChartHeight;
+            await this.applyChartHeight();
+        },
+        // Apply height change to chart by resizing chart after DOM update
+        async applyChartHeight() {
+            await this.$nextTick();
+            const chart = this.getChartInstance();
+            if (!chart) return;
+            try {
+                if (typeof chart.resize === 'function') {
+                    chart.resize();
+                } else if (typeof chart.update === 'function') {
+                    chart.update();
+                }
+            } catch (e) { }
         },
         toConfigObject(arr: Config[], index: number) : Config {
             const obj = Object.values(arr).at(index);
