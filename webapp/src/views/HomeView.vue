@@ -18,7 +18,7 @@
 
         <HintView :hints="liveData.hints" />
 
-        <div v-if="showSensorInfo">
+        <div v-if="showSensorInfo" class="mb-3">
             <SensorInfo :config="liveData.config" :updates="liveData.updates"/>
         </div>
 
@@ -26,7 +26,7 @@
             <TempChart :config="liveData.config" :updates="liveData.updates" />
         </div>
 
-        
+
     </BasePage>
 </template>
 
@@ -86,9 +86,11 @@ export default defineComponent({
     methods: {
         isLoggedIn,
         toggleSensorInfo() {
+            if (this.showSensorInfo && !this.showTempChart) return;
             this.showSensorInfo = !this.showSensorInfo;
         },
         toggleTempChart() {
+            if (this.showTempChart && !this.showSensorInfo) return;
             this.showTempChart = !this.showTempChart;
         },
         getInitialData(triggerLoading: boolean = true) {

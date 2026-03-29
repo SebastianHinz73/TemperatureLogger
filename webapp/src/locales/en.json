@@ -143,7 +143,9 @@
         "Ok": "Ok",
         "Unknown": "Unknown",
         "ShowGridProfile": "Show Grid Profile",
-        "GridProfile": "Grid Profile"
+        "GridProfile": "Grid Profile",
+        "ToggleSensorInfo": "Toggle Sensor Info",
+        "ToggleTempChart": "Toggle Chart"
     },
     "eventlog": {
         "Start": "Start",

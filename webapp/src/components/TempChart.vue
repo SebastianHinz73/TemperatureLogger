@@ -1,28 +1,23 @@
 <template>
     <div class="card" >
         <div class="card-header d-flex align-items-center" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
-            <div class="flex-grow-1 me-2">Date: <input ref="startDate" class="form-control-sm ms-2" type="date" /></div>
-            <span role="button" class="fs-5 me-2" :title="'Zoom In'" @click="ZoomIn"><BIconZoomIn /></span>
-            <span role="button" class="fs-5 me-2" :title="'Zoom Out'" @click="ZoomOut"><BIconZoomOut /></span>
-            <span role="button" class="fs-5 me-4" :title="'Reset Zoom'" @click="ResetZoom"><BIconArrowCounterclockwise /></span>
-            <span role="button" class="fs-5 me-2" :title="'Height++'" @click="IncreaseHeight(50)"><BIconArrowsExpand /></span>
-            <span role="button" class="fs-5 me-2" :title="'Height--'" @click="DecreaseHeight(50)"><BIconArrowsCollapse /></span>
-            <span role="button" class="fs-5" :title="'Reset Height'" @click="ResetHeight"><BIconArrowCounterclockwise /></span>
-        </div>
-        <div class="text-left">
-            <div class="btn-group ms-1 me-3" role="group" aria-label="Basic radio toggle button group">
+            <div class="d-flex align-items-center me-3">Date: <input ref="startDate" class="form-control-sm ms-2" type="date" style="padding-top: 0.2rem; padding-bottom: 0.2rem;" /></div>
+            <div class="btn-group btn-group-sm me-auto" role="group">
                 <input ref="duration30" type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" :checked="IsTimescale(0.5)" :disabled="IsDisabled()" @click="SetTimescale(0.5)">
-                <label class="btn btn-outline-success" for="btnradio1">30min</label>
-
-                <input ref="duration1" type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" :checked="IsTimescale(1)" :disabled="IsDisabled()" @click="SetTimescale(1)">
-                <label class="btn btn-outline-success" for="btnradio2">1h</label>
-
+                <label class="btn btn-outline-light" for="btnradio1">30min</label>
+                <input ref="duration1" type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" :checked="IsTimescale(2)" :disabled="IsDisabled()" @click="SetTimescale(2)">
+                <label class="btn btn-outline-light" for="btnradio2">2h</label>
                 <input ref="duration6" type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" :checked="IsTimescale(6)" :disabled="IsDisabled()" @click="SetTimescale(6)">
-                <label class="btn btn-outline-success" for="btnradio3">6h</label>
-
+                <label class="btn btn-outline-light" for="btnradio3">6h</label>
                 <input ref="duration24" type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" :checked="IsTimescale(24)" :disabled="IsDisabled()" @click="SetTimescale(24)">
-                <label class="btn btn-outline-success" for="btnradio4">24h</label>
+                <label class="btn btn-outline-light" for="btnradio4">24h</label>
             </div>
+            <span role="button" class="fs-5 me-2" @click="ZoomIn"><BIconZoomIn /></span>
+            <span role="button" class="fs-5 me-2" @click="ZoomOut"><BIconZoomOut /></span>
+            <span role="button" class="fs-5 me-4" @click="ResetZoom"><BIconArrowCounterclockwise /></span>
+            <span role="button" class="fs-5 me-2" @click="IncreaseHeight(50)"><BIconArrowsExpand /></span>
+            <span role="button" class="fs-5 me-2" @click="DecreaseHeight(50)"><BIconArrowsCollapse /></span>
+            <span role="button" class="fs-5" @click="ResetHeight"><BIconArrowCounterclockwise /></span>
         </div>
         <div class="card-body card-text text-center">
             <div
