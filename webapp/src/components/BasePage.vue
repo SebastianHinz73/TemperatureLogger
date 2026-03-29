@@ -2,7 +2,7 @@
     <div :class="{ 'container-xxl': !isWideScreen, 'container-fluid': isWideScreen }" role="main">
         <div class="page-header">
             <div class="row">
-                <div class="col-sm-11">
+                <div :class="showReload ? 'col-sm-11' : 'col'">
                     <div class="d-flex align-items-center justify-content-between">
                         <h1>
                             {{ title }}
@@ -14,7 +14,7 @@
                                 }"
                             ></span>
                         </h1>
-                        <div v-if="$slots.titleRight">
+                        <div v-if="$slots.titleRight" class="ms-auto me-2">
                             <slot name="titleRight" />
                         </div>
                     </div>
