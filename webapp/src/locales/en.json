@@ -143,7 +143,9 @@
         "Ok": "Ok",
         "Unknown": "Unknown",
         "ShowGridProfile": "Show Grid Profile",
-        "GridProfile": "Grid Profile"
+        "GridProfile": "Grid Profile",
+        "ToggleSensorInfo": "Toggle Sensor Info",
+        "ToggleTempChart": "Toggle Chart"
     },
     "eventlog": {
         "Start": "Start",
@@ -516,6 +518,7 @@
         "DS18B20Fahrenheit": "Measurement in °F:",
         "Seconds": "Seconds",
         "DeleteSensor": "Delete sensor",
+        "SensorVisible": "Sensor visible",
         "EditSensor": "Edit sensor",
         "Cancel": "@:maintenancereboot.Cancel",
         "Save": "@:base.Save",

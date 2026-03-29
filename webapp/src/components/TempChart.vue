@@ -1,30 +1,29 @@
 <template>
-    <div class="card">
-        <div class="card-header" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
-            <div class="justify-content-center align-self-center">
-                Date: <input ref="startDate" class="form-control-sm ms-2" type="date" />
+    <div class="card" >
+        <div class="card-header d-flex align-items-center" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
+            <input ref="startDate" class="form-control-sm me-2" type="date" style="padding-top: 0.2rem; padding-bottom: 0.2rem; max-width: 7rem;" />
+            <div class="btn-group btn-group-sm me-auto" role="group">
+                <input ref="duration30" type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" :checked="isTimescale05" :disabled="isDisabled" @click="SetTimescale(0.5)">
+                <label class="btn btn-outline-light" for="btnradio1">30min</label>
+                <input ref="duration1" type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" :checked="isTimescale2" :disabled="isDisabled" @click="SetTimescale(2)">
+                <label class="btn btn-outline-light" for="btnradio2">2h</label>
+                <input ref="duration6" type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" :checked="isTimescale6" :disabled="isDisabled" @click="SetTimescale(6)">
+                <label class="btn btn-outline-light" for="btnradio3">6h</label>
+                <input ref="duration24" type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" :checked="isTimescale24" :disabled="isDisabled" @click="SetTimescale(24)">
+                <label class="btn btn-outline-light" for="btnradio4">24h</label>
             </div>
-        </div>
-        <div class="text-left">
-            <div class="btn-group ms-1" role="group" aria-label="Basic radio toggle button group">
-                <input ref="duration30" type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" :checked="IsTimescale(0.5)" :disabled="IsDisabled()" @click="SetTimescale(0.5)">
-                <label class="btn btn-outline-success" for="btnradio1">30min</label>
-
-                <input ref="duration1" type="radio" class="btn-check" name="btnradio" id="btnradio2" autocomplete="off" :checked="IsTimescale(1)" :disabled="IsDisabled()" @click="SetTimescale(1)">
-                <label class="btn btn-outline-success" for="btnradio2">1h</label>
-
-                <input ref="duration6" type="radio" class="btn-check" name="btnradio" id="btnradio3" autocomplete="off" :checked="IsTimescale(6)" :disabled="IsDisabled()" @click="SetTimescale(6)">
-                <label class="btn btn-outline-success" for="btnradio3">6h</label>
-
-                <input ref="duration24" type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" :checked="IsTimescale(24)" :disabled="IsDisabled()" @click="SetTimescale(24)">
-                <label class="btn btn-outline-success" for="btnradio4">24h</label>
-            </div>
+            <span role="button" class="fs-5 me-2" @click="ZoomIn"><BIconZoomIn /></span>
+            <span role="button" class="fs-5 me-2" @click="ZoomOut"><BIconZoomOut /></span>
+            <span role="button" class="fs-5 me-4" @click="ResetZoom"><BIconArrowCounterclockwise /></span>
+            <span role="button" class="fs-5 me-2" @click="IncreaseHeight(50)"><BIconArrowsExpand /></span>
+            <span role="button" class="fs-5 me-2" @click="DecreaseHeight(50)"><BIconArrowsCollapse /></span>
+            <span role="button" class="fs-5" @click="ResetHeight"><BIconArrowCounterclockwise /></span>
         </div>
         <div class="card-body card-text text-center">
             <div
                 class="row row-cols-1 row-cols-md-3 g-3">
-                <Scatter :data="chartData" :options="chartOptions" />
-            </div>
+                <Scatter ref="tempChart" :data="chartData" :options="chartOptions" :style="{ height: chartHeight + 'px', width: '100%', position:'relative' }"/>
+             </div>
         </div>
     </div>
 
@@ -35,6 +34,7 @@ import type { Config, Update } from '@/types/LiveDataStatus';
 import { authHeader, handleBinaryResponse } from '@/utils/authentication';
 import { defineComponent, type PropType } from 'vue';
 import CardElement from './CardElement.vue';
+import { BIconZoomIn, BIconZoomOut, BIconArrowCounterclockwise, BIconArrowsExpand, BIconArrowsCollapse } from 'bootstrap-icons-vue';
 
 import {
     Chart as ChartJS,
@@ -46,9 +46,12 @@ import {
     Tooltip,
     Legend,
 } from 'chart.js';
+import type { ChartOptions } from 'chart.js';
+import zoomPlugin from 'chartjs-plugin-zoom';
 import { Scatter } from 'vue-chartjs';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(zoomPlugin);
 
 interface IDatasets {
     serial: string;
@@ -73,34 +76,29 @@ export default defineComponent({
     },
     watch: {
         updates: {
-            handler(newVal: Update[]) { // receive updates from board on websocket
-                //console.table(newVal);
-
-                if(!this.IsTodaySelected()) {
+            handler(newVal: Update[]) {
+                if(!this.isTodaySelected || !this.configData.length) {
                     return;
                 }
 
-                const time = new Date();
-                const now = time.getTime() / 1000;
-
-                const copyDataset: IDatasets[] = this.copyDataset(this.configData);
-
-                for (let i = 0; i < this.configData.length; i++) {
-                    const serial = this.configData[i]?.serial ?? '';
-                    if(serial.length)
-                    {
-                        const value = newVal.find(el => el.serial == serial)?.value;
-                        if(value !== undefined)
-                        {
-                            let src = this.configData.find(el => (el.serial === serial));
-                            let dst = copyDataset.find(el => (el.serial === serial));
-                            if (src && dst) {
-                                dst.data = [...src.data,   { x: now, y: value } ] ;
-                            }
-                        }
-                    }
+                const now = Date.now() / 1000;
+                const updateMap = new Map<string, number>();
+                for (const u of newVal) {
+                    updateMap.set(u.serial, u.value);
                 }
-                this.configData = copyDataset;
+
+                let changed = false;
+                const newData = this.configData.map(ds => {
+                    const value = updateMap.get(ds.serial);
+                    if (value !== undefined) {
+                        changed = true;
+                        return { ...ds, data: [...ds.data, { x: now, y: value }] };
+                    }
+                    return ds;
+                });
+                if (changed) {
+                    this.configData = newData;
+                }
             },
             deep: true,
         },
@@ -108,6 +106,11 @@ export default defineComponent({
     components: {
         Scatter,
         CardElement,
+        BIconZoomIn,
+        BIconZoomOut,
+        BIconArrowCounterclockwise,
+        BIconArrowsExpand,
+        BIconArrowsCollapse,
     },
     data() {
         return {
@@ -115,6 +118,10 @@ export default defineComponent({
 
             start: {} as Date,
             length: 0 as number,
+
+            // chart height in pixels (can be changed by buttons)
+            chartHeight: 400 as number,
+            defaultChartHeight: 400 as number,
 
             sensors: this.config,
 
@@ -146,35 +153,53 @@ export default defineComponent({
                     legend: {
                         display: true,
                     },
-                },
-/*                tooltips: {
-                    usePointStyle: true,
-                    callbacks: {
-                        labelPointStyle: function(context) {
-                            return {
-                                pointStyle: 'triangle',
-                                rotation: 0
-                            };
-                        }
+                    tooltip: {
+                        callbacks: {
+                            label: function (context: any) {
+                                // X als Unix-Sekunden -> in ms umwandeln
+                                const ts = context.parsed?.x ?? context.raw?.x ?? 0;
+                                const d = new Date(ts * 1000);
+                                const hh = ("0" + d.getHours()).slice(-2);
+                                const mm = ("0" + d.getMinutes()).slice(-2);
+                                const ss = ("0" + d.getSeconds()).slice(-2);
+                                const y = context.parsed?.y ?? context.raw?.y ?? '';
+                                return `${hh}:${mm}:${ss} — ${y}`;
+                            },
+                        },
                     },
-                },*/
-            },
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'x',
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true,
+                            },
+                            pinch: {
+                                enabled: true,
+                            },
+                            mode: 'x',
+                        },
+                    },
+                },
+            } as ChartOptions<'scatter'>,
         };
     },
-    // https://medium.com/risan/vue-chart-component-with-chart-js-db85a2d21288
-    // https://www.chartjs.org/docs/latest/configuration/tooltip.html#label-callback
     created() {
         this.SetTimescale(0.5);
     },
     mounted() {
         let datepicker = this.$refs.startDate as HTMLInputElement
-        datepicker.addEventListener('change',(e: any)=>{
+        datepicker.addEventListener('change', async (e: any) => {
             const el = e.target.value.split('-');
             var now = new Date(el[0], el[1]-1, el[2], 0, 0, 0, 0);
             //console.log(now.getTime() / 1000);
             this.start = now;
             this.length = 24*60*60;
-            this.fetchData();
+            // ensure data is fetched and then update/reset zoom limits to match new day
+            await this.fetchData();
+            this.ResetZoom();
         })
 
         const today = new Date();
@@ -191,50 +216,46 @@ export default defineComponent({
             }
             return { datasets: this.configData };
         },
+        isTodaySelected(): boolean {
+            if (!(this.start instanceof Date)) return false;
+            const now = new Date();
+            return now.getFullYear() === this.start.getFullYear() &&
+                now.getMonth() === this.start.getMonth() &&
+                now.getDate() === this.start.getDate();
+        },
+        isDisabled(): boolean {
+            return this.dataLoading || !this.isTodaySelected;
+        },
+        isTimescale05(): boolean {
+            return this.length === 0.5 * 60 * 60;
+        },
+        isTimescale2(): boolean {
+            return this.length === 2 * 60 * 60;
+        },
+        isTimescale6(): boolean {
+            return this.length === 6 * 60 * 60;
+        },
+        isTimescale24(): boolean {
+            return this.length === 24 * 60 * 60;
+        },
     },
     methods: {
-        copyDataset(src: IDatasets[], copy: boolean = false): IDatasets[] {
-            let newSets: IDatasets[] = [];
-            for (let i = 0; i < src.length; i++) {
-                const config = src[i];
-                if(config !== undefined) {
-                    let set: IDatasets = {
-                        serial: config.serial,
-                        label: config.label,
-                        fill: false,
-                        borderColor: config.borderColor,
-                        backgroundColor: config.borderColor,
-                        showLine: true,
-                        borderWidth: 2,
-                        data: copy ? config.data : [],
-                    };
-                    newSets.push(set);
+        async fetchBinaryData(serial: string): Promise<DataPoint[]> {
+            const response = await fetch('/api/livedata/graphdata?id=' + serial + '&start=' + this.start.getTime() / 1000 + '&length=' + this.length, { headers: authHeader() });
+            const data = await handleBinaryResponse(response, this.$emitter, this.$router, true);
+            const lines = data.split('\n');
+            const points: DataPoint[] = new Array(lines.length);
+            let count = 0;
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (!line) continue;
+                const sep = line.indexOf(';');
+                if (sep > 0) {
+                    points[count++] = { x: parseInt(line.substring(0, sep), 10), y: parseFloat(line.substring(sep + 1)) };
                 }
             }
-            return newSets;
-        },
-        async fetchBinaryData(serial: string): Promise<DataPoint[]> {
-            let points: DataPoint[] = [];
-
-            //const startOfDay = new Date();
-            //startOfDay.setHours(0,0,0,0);
-
-            return new Promise((resolve) => {
-                fetch('/api/livedata/graphdata?id=' + serial + '&start=' + this.start.getTime() / 1000 + '&length=' + this.length, { headers: authHeader() })
-                    .then((response) => handleBinaryResponse(response, this.$emitter, this.$router, true))
-                    .then((data) => {
-                        //console.log(data.slice(-100));
-                        data.split('\n').forEach(line => {
-                            const el = line.split(';')
-                            if(el[0] !== undefined && el[1] !== undefined) {
-                                const dp = { x: parseInt(el[0], 10), y: parseFloat(el[1]) } as DataPoint;
-                                points.push(dp);
-                            }
-                        });
-                        this.dataLoading = false;
-                        resolve(points);
-                    });
-            });
+            points.length = count;
+            return points;
         },
         getColor(index: number, max: number): string {
             max = Math.floor((max + 1) / 2);
@@ -271,34 +292,40 @@ export default defineComponent({
                     b: Math.round(b * 255)};
         },
         async fetchData() {
-            //console.log(this.sensors);
-            let sets: IDatasets[] = [];
+            const visibleSensors: { sensor: Config; index: number }[] = [];
             for (let i = 0; i < this.sensors.length; i++) {
                 const sensor = this.toConfigObject(this.sensors, i);
-                if(!sensor.valid) {
-                    continue;
+                if (sensor.connected && sensor.visible) {
+                    visibleSensors.push({ sensor, index: i });
                 }
+            }
+            if (!visibleSensors.length) {
+                this.configData = [];
+                return;
+            }
 
-                this.dataLoading = true;
-
-                let set: IDatasets = {
+            this.dataLoading = true;
+            const sets: IDatasets[] = [];
+            for (const { sensor, index } of visibleSensors) {
+                sets.push({
                     serial: sensor.serial.toString(16),
                     label: sensor.name,
                     fill: false,
-                    borderColor: this.getColor(i, this.sensors.length),
-                    backgroundColor: this.getColor(i, this.sensors.length),
+                    borderColor: this.getColor(index, this.sensors.length),
+                    backgroundColor: this.getColor(index, this.sensors.length),
                     showLine: true,
                     borderWidth: 2,
                     data: await this.fetchBinaryData(sensor.serial.toString(16)),
-                };
-                sets.push(set);
+                });
             }
+            this.dataLoading = false;
             this.configData = sets;
         },
-        SetTimescale(scale: number) {
+        async SetTimescale(scale: number) {
             const now = new Date();
             switch (scale) {
                 case 24:
+                    // set to start of day
                     now.setHours(0,0,0,0);
                     this.start = now;
                     this.length = 24*60*60;
@@ -308,32 +335,120 @@ export default defineComponent({
                     this.start = new Date(now.getTime() - this.length * 1000);
                     break;
             }
-            this.fetchData();
+            // wait for data to be fetched so the chart exists / has data
+            await this.fetchData();
+            // reset zoom to the full (and clamped) range for the new timescale
+            this.ResetZoom();
         },
-        IsTimescale(scale: number) {
-            if(scale*60*60 == this.length) {
-                return true;
-            }
-            return false;
+        SetZoom(scale: number) {
+            const chart = this.getChartInstance();
+            if (!chart) return;
+
+            // Versuche aktuelle Achsengrenzen zu ermitteln; fallback auf full range
+            const xScale = chart.scales?.x;
+            const fallbackMin = this.start ? this.start.getTime() / 1000 : undefined;
+            const fallbackMax = (fallbackMin !== undefined) ? (fallbackMin + this.length) : undefined;
+
+            const min = xScale?.min ?? fallbackMin ?? 0;
+            const max = xScale?.max ?? fallbackMax ?? (min + this.length || 3600);
+
+            const center = (min + max) / 2;
+            const width = (max - min) * scale; // scale <1 = reinzoomen, >1 = rauszoomen
+            const newMin = center - width / 2;
+            const newMax = center + width / 2;
+
+            // apply with clamping to full day range
+            this.setZoomLimits(newMin, newMax);
         },
-        IsDisabled() {
-            if(this.dataLoading){
-                return true;
-            }
-            if(this.IsTodaySelected()) {
-                return false;
-            }
-            return true;
+
+        ZoomIn() {
+            this.SetZoom(0.5);
         },
-        IsTodaySelected() {
-            var now = new Date();
-            if(now.getFullYear() == this.start.getFullYear() &&
-                now.getMonth() == this.start.getMonth() &&
-                now.getDay() == this.start.getDay())
-            {
-                return true;
+
+        ZoomOut() {
+            this.SetZoom(2);
+        },
+
+        ResetZoom() {
+            const fullMin = this.start ? this.start.getTime() / 1000 : undefined;
+            const fullMax = (fullMin !== undefined) ? (fullMin + this.length) : undefined;
+
+            if (fullMin !== undefined && fullMax !== undefined) {
+                this.setZoomLimits(fullMin, fullMax);
+            } else {
+                // fallback to plugin resetZoom if available
+                const chart = this.getChartInstance();
+                if (chart && typeof chart.resetZoom === 'function') {
+                    try { chart.resetZoom(); } catch (e) { console.warn(e); }
+                }
             }
-            return false;
+        },
+
+        // Ensure provided min/max are clamped to the available full range (start..start+length)
+        setZoomLimits(min: number, max: number) {
+            const chart = this.getChartInstance();
+            if (!chart) return;
+
+            const fullMin = this.start ? this.start.getTime() / 1000 : undefined;
+            const fullMax = (fullMin !== undefined) ? (fullMin + this.length) : undefined;
+
+            if (fullMin === undefined || fullMax === undefined) {
+                // nothing to clamp against
+                chart.options.scales.x.min = min;
+                chart.options.scales.x.max = max;
+                try { chart.update('none'); } catch (e) { /* ignore */ }
+                return;
+            }
+
+            // clamp
+            let clampedMin = Math.max(min, fullMin);
+            let clampedMax = Math.min(max, fullMax);
+
+            // Ensure we don't invert or make an empty range; if requested range wider than full range, use full range
+            if (clampedMin >= clampedMax) {
+                clampedMin = fullMin;
+                clampedMax = fullMax;
+            }
+
+            //chart.options = chart.options || {};
+            //chart.options.scales = chart.options.scales || {};
+            //chart.options.scales.x = chart.options.scales.x || {};
+            chart.options.scales.x.min = clampedMin;
+            chart.options.scales.x.max = clampedMax;
+            try { chart.update('none'); } catch (e) { /* ignore */ }
+        },
+
+        getChartInstance(): any {
+            const chartComp: any = this.$refs.tempChart;
+            return chartComp?.chartInstance ?? chartComp?.chart ?? chartComp?.$chart ?? null;
+        },
+        // Increase chart canvas height by step (px)
+        async IncreaseHeight(step: number) {
+            this.chartHeight = Math.min(2000, this.chartHeight + step);
+            await this.applyChartHeight();
+        },
+        // Decrease chart canvas height by step (px)
+        async DecreaseHeight(step: number) {
+            this.chartHeight = Math.max(200, this.chartHeight - step);
+            await this.applyChartHeight();
+        },
+        // Reset chart canvas height to default
+        async ResetHeight() {
+            this.chartHeight = this.defaultChartHeight;
+            await this.applyChartHeight();
+        },
+        // Apply height change to chart by resizing chart after DOM update
+        async applyChartHeight() {
+            await this.$nextTick();
+            const chart = this.getChartInstance();
+            if (!chart) return;
+            try {
+                if (typeof chart.resize === 'function') {
+                    chart.resize();
+                } else if (typeof chart.update === 'function') {
+                    chart.update();
+                }
+            } catch (e) { }
         },
         toConfigObject(arr: Config[], index: number) : Config {
             const obj = Object.values(arr).at(index);
@@ -342,14 +457,16 @@ export default defineComponent({
                 let set: Config = {
                     serial: obj.serial,
                     name: obj.name,
-                    valid: obj.valid,
+                    connected: obj.connected,
+                    visible: obj.visible,
                 };
                 return set;
             }
             let set: Config = {
                     serial: 0,
                     name: "",
-                    valid: false,
+                    connected: false,
+                    visible: false,
                 };
             return set;
         },

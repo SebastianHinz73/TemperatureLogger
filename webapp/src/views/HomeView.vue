@@ -7,9 +7,26 @@
         :isWebsocketConnected="isWebsocketConnected"
         @reload="reloadData"
     >
+        <template #titleRight>
+            <span role="button" class="me-3 fs-4" :style="{ opacity: showSensorInfo ? 1 : 0.3 }" @click="toggleSensorInfo" :title="$t('home.ToggleSensorInfo') || 'SensorInfo'">
+                <BIconThermometerHalf />
+            </span>
+            <span role="button" class="fs-4" :style="{ opacity: showTempChart ? 1 : 0.3 }" @click="toggleTempChart" :title="$t('home.ToggleTempChart') || 'Chart'">
+                <BIconGraphUp />
+            </span>
+        </template>
+
         <HintView :hints="liveData.hints" />
-        <SensorInfo :config="liveData.config" :updates="liveData.updates"/><br />
-        <TempChart :config="liveData.config" :updates="liveData.updates"/><br />
+
+        <div v-if="showSensorInfo" class="mb-3">
+            <SensorInfo :config="liveData.config" :updates="liveData.updates"/>
+        </div>
+
+        <div v-if="showTempChart">
+            <TempChart :config="liveData.config" :updates="liveData.updates" />
+        </div>
+
+
     </BasePage>
 </template>
 
@@ -18,6 +35,7 @@ import BasePage from '@/components/BasePage.vue';
 import TempChart from '@/components/TempChart.vue';
 import HintView from '@/components/HintView.vue';
 import SensorInfo from '@/components/SensorInfo.vue';
+import { BIconThermometerHalf, BIconGraphUp } from 'bootstrap-icons-vue';
 import type { LiveData } from '@/types/LiveDataStatus';
 import { authHeader, authUrl, handleResponse, isLoggedIn } from '@/utils/authentication';
 import { defineComponent } from 'vue';
@@ -28,6 +46,8 @@ export default defineComponent({
         HintView,
         TempChart,
         SensorInfo,
+        BIconThermometerHalf,
+        BIconGraphUp,
     },
     data() {
         return {
@@ -40,6 +60,9 @@ export default defineComponent({
             liveData: {} as LiveData,
             isFirstFetchAfterConnect: true,
             isWebsocketConnected: false,
+            // visibility toggles for right-side controls
+            showSensorInfo: true,
+            showTempChart: true,
         };
     },
     created() {
@@ -62,6 +85,14 @@ export default defineComponent({
     },
     methods: {
         isLoggedIn,
+        toggleSensorInfo() {
+            if (this.showSensorInfo && !this.showTempChart) return;
+            this.showSensorInfo = !this.showSensorInfo;
+        },
+        toggleTempChart() {
+            if (this.showTempChart && !this.showSensorInfo) return;
+            this.showTempChart = !this.showTempChart;
+        },
         getInitialData(triggerLoading: boolean = true) {
             if (triggerLoading) {
                 this.dataLoading = true;

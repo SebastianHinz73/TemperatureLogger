@@ -2,6 +2,7 @@
 export interface DS18B20Info {
     serial: string;
     connected: boolean;
+    visible: boolean;
     name: string;
 }
 

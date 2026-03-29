@@ -1,7 +1,8 @@
 export interface Config {
     serial: number;
     name: string;
-    valid: boolean;
+    connected: boolean;
+    visible: boolean;
 }
 
 export interface Update {

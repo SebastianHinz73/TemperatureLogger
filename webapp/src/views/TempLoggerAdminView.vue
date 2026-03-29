@@ -36,6 +36,10 @@
                                     <span class="icon text-danger">
                                         <BIconExclamationCircle v-if="!item.connected" />
                                     </span>
+                                    <span class="icon">
+                                        &nbsp;
+                                        <BIconEyeSlash v-if="!item.visible"/>
+                                    </span>
                                 </td>
                                 <td>{{ item.serial.toUpperCase() }}</td>
                                 <td>{{ item.name }}</td>
@@ -70,6 +74,8 @@
                 <div class="modal-body">
                     <InputElement :label="$t('temploggeradmin.Name')" type="text" maxlength="31"
                         v-model="selectedSensorData.name" />
+                    <InputElement :label="$t('temploggeradmin.SensorVisible')" type="checkbox"
+                        v-model="selectedSensorData.visible" />
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" @click="onCloseModal(modal)" data-bs-dismiss="modal">{{
@@ -121,10 +127,10 @@ import * as bootstrap from 'bootstrap';
 import {
     BIconPencil,
     BIconTrash,
+    BIconEyeSlash,
     BIconGripHorizontal,
     BIconExclamationCircle,
     BIconCheckCircle
-
 } from 'bootstrap-icons-vue';
 import { defineComponent } from 'vue';
 
@@ -144,6 +150,7 @@ export default defineComponent({
         InputElement,
         BIconPencil,
         BIconTrash,
+        BIconEyeSlash,
         BIconGripHorizontal,
         BIconExclamationCircle,
         BIconCheckCircle
@@ -230,6 +237,7 @@ export default defineComponent({
                 const index = this.tempLoggerConfigList.sensors.indexOf(found);
                 if (index > -1 && this.tempLoggerConfigList.sensors[index] !== undefined) { // only splice array when item is found
                     this.tempLoggerConfigList.sensors[index].name = this.selectedSensorData.name;
+                    this.tempLoggerConfigList.sensors[index].visible = this.selectedSensorData.visible;
                 }
             }
 

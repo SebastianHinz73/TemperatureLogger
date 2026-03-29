@@ -35,6 +35,7 @@
 
 struct DS18B20SENSOR_CONFIG_T {
     uint16_t Serial;
+    bool Visible;
     char Name[TEMPLOGGER_MAX_SENSORNAME_STRLEN + 1];
 };
 
