@@ -1,7 +1,7 @@
 <template>
     <div class="card" >
         <div class="card-header d-flex align-items-center" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
-            <div class="d-flex align-items-center me-3">Date: <input ref="startDate" class="form-control-sm ms-2" type="date" style="padding-top: 0.2rem; padding-bottom: 0.2rem;" /></div>
+            <input ref="startDate" class="form-control-sm me-2" type="date" style="padding-top: 0.2rem; padding-bottom: 0.2rem; max-width: 7rem;" />
             <div class="btn-group btn-group-sm me-auto" role="group">
                 <input ref="duration30" type="radio" class="btn-check" name="btnradio" id="btnradio1" autocomplete="off" :checked="IsTimescale(0.5)" :disabled="IsDisabled()" @click="SetTimescale(0.5)">
                 <label class="btn btn-outline-light" for="btnradio1">30min</label>
