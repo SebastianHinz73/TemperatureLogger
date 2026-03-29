@@ -7,9 +7,28 @@
         :isWebsocketConnected="isWebsocketConnected"
         @reload="reloadData"
     >
+        <template #titleRight>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-primary" @click="toggleSensorInfo">
+                    {{ $t('home.ToggleSensorInfo') || 'SensorInfo' }}
+                </button>
+                <button type="button" class="btn btn-outline-primary" @click="toggleTempChart">
+                    {{ $t('home.ToggleTempChart') || 'Chart' }}
+                </button>
+            </div>
+        </template>
+
         <HintView :hints="liveData.hints" />
-        <SensorInfo :config="liveData.config" :updates="liveData.updates"/><br />
-        <TempChart :config="liveData.config" :updates="liveData.updates"/><br />
+
+        <div v-if="showSensorInfo">
+            <SensorInfo :config="liveData.config" :updates="liveData.updates"/>
+        </div>
+
+        <div v-if="showTempChart">
+            <TempChart :config="liveData.config" :updates="liveData.updates" />
+        </div>
+
+        
     </BasePage>
 </template>
 
@@ -40,6 +59,9 @@ export default defineComponent({
             liveData: {} as LiveData,
             isFirstFetchAfterConnect: true,
             isWebsocketConnected: false,
+            // visibility toggles for right-side controls
+            showSensorInfo: true,
+            showTempChart: true,
         };
     },
     created() {
@@ -62,6 +84,12 @@ export default defineComponent({
     },
     methods: {
         isLoggedIn,
+        toggleSensorInfo() {
+            this.showSensorInfo = !this.showSensorInfo;
+        },
+        toggleTempChart() {
+            this.showTempChart = !this.showTempChart;
+        },
         getInitialData(triggerLoading: boolean = true) {
             if (triggerLoading) {
                 this.dataLoading = true;

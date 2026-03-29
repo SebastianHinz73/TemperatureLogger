@@ -1,9 +1,7 @@
 <template>
     <div class="card" >
         <div class="card-header" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
-            <div class="justify-content-center align-self-center">
-                Date: <input ref="startDate" class="form-control-sm ms-2" type="date" />
-            </div>
+            <div class="me-2">Date: <input ref="startDate" class="form-control-sm ms-2" type="date" /></div>
         </div>
         <div class="text-left">
             <div class="btn-group ms-1 me-3" role="group" aria-label="Basic radio toggle button group">

@@ -3,16 +3,21 @@
         <div class="page-header">
             <div class="row">
                 <div class="col-sm-11">
-                    <h1>
-                        {{ title }}
-                        <span
-                            v-if="showWebSocket"
-                            :class="{
-                                onlineMarker: isWebsocketConnected,
-                                offlineMarker: !isWebsocketConnected,
-                            }"
-                        ></span>
-                    </h1>
+                    <div class="d-flex align-items-center justify-content-between">
+                        <h1>
+                            {{ title }}
+                            <span
+                                v-if="showWebSocket"
+                                :class="{
+                                    onlineMarker: isWebsocketConnected,
+                                    offlineMarker: !isWebsocketConnected,
+                                }"
+                            ></span>
+                        </h1>
+                        <div v-if="$slots.titleRight">
+                            <slot name="titleRight" />
+                        </div>
+                    </div>
                 </div>
                 <div class="col-sm-1" v-if="showReload">
                     <button
