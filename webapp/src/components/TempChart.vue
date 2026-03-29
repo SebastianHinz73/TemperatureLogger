@@ -1,7 +1,13 @@
 <template>
     <div class="card" >
-        <div class="card-header" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
-            <div class="me-2">Date: <input ref="startDate" class="form-control-sm ms-2" type="date" /></div>
+        <div class="card-header d-flex align-items-center" :class="{ 'text-bg-success': true, 'text-bg-danger': false }">
+            <div class="flex-grow-1 me-2">Date: <input ref="startDate" class="form-control-sm ms-2" type="date" /></div>
+            <span role="button" class="fs-5 me-2" :title="'Zoom In'" @click="ZoomIn"><BIconZoomIn /></span>
+            <span role="button" class="fs-5 me-2" :title="'Zoom Out'" @click="ZoomOut"><BIconZoomOut /></span>
+            <span role="button" class="fs-5 me-4" :title="'Reset Zoom'" @click="ResetZoom"><BIconArrowCounterclockwise /></span>
+            <span role="button" class="fs-5 me-2" :title="'Height++'" @click="IncreaseHeight(50)"><BIconArrowsExpand /></span>
+            <span role="button" class="fs-5 me-2" :title="'Height--'" @click="DecreaseHeight(50)"><BIconArrowsCollapse /></span>
+            <span role="button" class="fs-5" :title="'Reset Height'" @click="ResetHeight"><BIconArrowCounterclockwise /></span>
         </div>
         <div class="text-left">
             <div class="btn-group ms-1 me-3" role="group" aria-label="Basic radio toggle button group">
@@ -16,16 +22,6 @@
 
                 <input ref="duration24" type="radio" class="btn-check" name="btnradio" id="btnradio4" autocomplete="off" :checked="IsTimescale(24)" :disabled="IsDisabled()" @click="SetTimescale(24)">
                 <label class="btn btn-outline-success" for="btnradio4">24h</label>
-            </div>
-            <div class="btn-group ms-1 me-3" role="group" aria-label="Zoom button group">
-                <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="ZoomIn">Zoom In</button>
-                <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="ZoomOut">Zoom Out</button>
-                <button type="button" class="btn btn-outline-secondary" :disabled="IsLoading()" @click="ResetZoom">Reset</button>
-            </div>
-            <div class="btn-group ms-1" role="group" aria-label="Height button group">
-                <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="IncreaseHeight(50)">Height++</button>
-                <button type="button" class="btn btn-outline-success" :disabled="IsLoading()" @click="DecreaseHeight(50)">Height--</button>
-                <button type="button" class="btn btn-outline-secondary" :disabled="IsLoading()" @click="ResetHeight">Reset</button>
             </div>
         </div>
         <div class="card-body card-text text-center">
@@ -43,6 +39,7 @@ import type { Config, Update } from '@/types/LiveDataStatus';
 import { authHeader, handleBinaryResponse } from '@/utils/authentication';
 import { defineComponent, type PropType } from 'vue';
 import CardElement from './CardElement.vue';
+import { BIconZoomIn, BIconZoomOut, BIconArrowCounterclockwise, BIconArrowsExpand, BIconArrowsCollapse } from 'bootstrap-icons-vue';
 
 import {
     Chart as ChartJS,
@@ -119,6 +116,11 @@ export default defineComponent({
     components: {
         Scatter,
         CardElement,
+        BIconZoomIn,
+        BIconZoomOut,
+        BIconArrowCounterclockwise,
+        BIconArrowsExpand,
+        BIconArrowsCollapse,
     },
     data() {
         return {
