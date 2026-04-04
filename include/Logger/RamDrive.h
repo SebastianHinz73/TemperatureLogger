@@ -20,8 +20,8 @@ public:
     static void AllocateRamDrive();
     static void FreeRamDrive();
 
-    size_t getSizeBytes() const { return _ramBuffer->getTotalElements() * sizeof(dataEntry_t); }
-    size_t getUsedBytes() const { return _ramBuffer->getUsedElements() * sizeof(dataEntry_t); }
+    size_t getSizeBytes() const { return _ramBuffer->getTotalElements() * sizeof(dataEntryFEC_t); }
+    size_t getUsedBytes() const { return _ramBuffer->getUsedElements() * sizeof(dataEntryFEC_t); }
     time_t getOldestTime() const { return _ramBuffer->getOldestTime(); }
     time_t getNewestTime() const { return _ramBuffer->getNewestTime(); }
 
