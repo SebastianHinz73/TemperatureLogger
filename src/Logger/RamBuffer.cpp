@@ -70,7 +70,7 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
     _header->last->serial = serial;
     _header->last->time = time;
     _header->last->value = value;
-     MessageOutput.printf("writeValue: ## %d: 0x%x, (%ld, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
+     //MessageOutput.printf("writeValue: ## %d: 0x%x, (%ld, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
 
      _rsData.EncodeBlock(_header->last, _header->last->ecc);
 
@@ -226,6 +226,7 @@ bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t
         // adjust _header->last
         size_t entries = (alreadyWritten + len) / sizeof(dataEntryFEC_t);
         _header->last = _header->first + entries;
+        _rsHeader.EncodeBlock(_header, _header->ecc);
         MessageOutput.printf("RamBuffer::restoreBackup final entries=%d, first=%d, last=%d\r\n", entries, toIndex(_header->first), toIndex(_header->last));
     }
 
