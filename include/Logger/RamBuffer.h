@@ -65,7 +65,7 @@ private:
     int toIndex(const dataEntryFEC_t* entry) const { return entry - _header->start; }
     dataEntry_t* findStart(time_t time);
 
-public:
+private:
     dataEntryHeader_t* _header;
     size_t _elements;
     uint8_t* _cache;

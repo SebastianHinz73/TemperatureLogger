@@ -36,6 +36,8 @@ void RamBuffer::PowerOnInitialize()
 
 bool RamBuffer::IntegrityCheck()
 {
+    MessageOutput.println("IntegrityCheck ...");
+
     if (_rsHeader.Decode(_header, _header) > 0)
     {
         MessageOutput.println("RamBuffer header ecc failed");
@@ -47,6 +49,7 @@ bool RamBuffer::IntegrityCheck()
     for (int i = 0; i < 2; i++) {
         while (act < _header->end) {
             if (act == _header->last) {
+                MessageOutput.println("IntegrityCheck done");
                 return true;
             }
 
@@ -96,7 +99,7 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
         for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
             sum += ((uint32_t*)_cache)[i];
         }
-        // MessageOutput.printf("sum %d\r\n", sum);
+        MessageOutput.printf("Cache %d\r\n", sum); // make sure the compiler does not optimize the loop away
     }
 }
 
@@ -214,29 +217,33 @@ bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t
         act = static_cast<uint8_t*>(static_cast<void*>(_header->first));
     }
 
-    if(alreadyWritten + len > _elements * sizeof(dataEntryFEC_t)) {
-        MessageOutput.printf("RamBuffer::restoreBackup overflow alreadyWritten=%d, len=%d, max=%d\r\n", alreadyWritten, len, _elements * sizeof(dataEntryFEC_t));
-        return false;
+    if(alreadyWritten <= getTotalElements() * sizeof(dataEntryFEC_t)) {
+        len = min(len, getTotalElements() * sizeof(dataEntryFEC_t) - alreadyWritten);
+        memcpy(act, data, len);
+        act += len;
     }
-
-    memcpy(act, data, len);
-    act += len;
+    else
+    {
+        MessageOutput.printf("RamBuffer::restoreBackup overflow alreadyWritten=%d, len=%d, max=%d\r\n", alreadyWritten, len, getTotalElements() * sizeof(dataEntryFEC_t));
+    }
 
     if(final) {
         // adjust _header->last
-        size_t entries = (alreadyWritten + len) / sizeof(dataEntryFEC_t);
+        size_t entries = (act - static_cast<uint8_t*>(static_cast<void*>(_header->first))) / sizeof(dataEntryFEC_t);
         _header->last = _header->first + entries;
         _rsHeader.EncodeBlock(_header, _header->ecc);
         MessageOutput.printf("RamBuffer::restoreBackup final entries=%d, first=%d, last=%d\r\n", entries, toIndex(_header->first), toIndex(_header->last));
+
+        if (_cache != nullptr) {
+            // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
+            uint32_t sum = 0;
+            for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
+                sum += ((uint32_t*)_cache)[i];
+            }
+            MessageOutput.printf("Cache %d\r\n", sum); // make sure the compiler does not optimize the loop away
+        }
     }
 
-    if (_cache != nullptr) {
-        // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
-        uint32_t sum = 0;
-        for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
-            sum += ((uint32_t*)_cache)[i];
-        }
-        // MessageOutput.printf("sum %d\r\n", sum);
-    }
+
     return true;
 }

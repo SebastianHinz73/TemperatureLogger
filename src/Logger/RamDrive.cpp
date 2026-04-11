@@ -56,12 +56,12 @@ void RamDriveClass::FreeRamDrive()
 }
 
 void RamDriveClass::writeValue(uint16_t serial, time_t time, float value)
-{
+{/*
     if(_mutexRamDrive.TryLock(0, 100))
     {
         _ramBuffer->writeValue(serial, time, value);
         _mutexRamDrive.unlock();
-    }
+    }*/
 }
 
 bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
@@ -126,7 +126,6 @@ bool RamDriveClass::restoreBackup(size_t alreadyWritten, const uint8_t* data, si
 
     if(final)
     {
-        startupCheck();
         _mutexRamDrive.unlock();
     }
     return rc;
