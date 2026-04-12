@@ -96,11 +96,10 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
 
     if (_cache != nullptr) {
         // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
-        uint32_t sum = 0;
+        volatile uint32_t sum = 0;
         for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
-            sum += ((uint32_t*)_cache)[i];
+            sum += ((volatile uint32_t*)_cache)[i];
         }
-        MessageOutput.printf("Cache %d\r\n", sum); // make sure the compiler does not optimize the loop away
     }
 }
 
@@ -235,11 +234,10 @@ bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t
 
         if (_cache != nullptr) {
             // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
-            uint32_t sum = 0;
+            volatile uint32_t sum = 0;
             for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
-                sum += ((uint32_t*)_cache)[i];
+                sum += ((volatile uint32_t*)_cache)[i];
             }
-            MessageOutput.printf("Cache %d\r\n", sum); // make sure the compiler does not optimize the loop away
         }
         _restorePos = nullptr;
     }
