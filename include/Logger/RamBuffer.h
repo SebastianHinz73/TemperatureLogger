@@ -5,7 +5,7 @@
 #include "IDataStoreDevice.h"
 #include "RS-FEC.h"
 
-#pragma pack(2)
+#pragma pack(push, 2)
 const uint8_t DATAENTRY_ECC_LENGTH = 6;  // Max corrected bytes ECC_LENGTH/2
 
 typedef struct
@@ -23,8 +23,8 @@ typedef struct
     char ecc[DATAENTRY_ECC_LENGTH];
 } dataEntryFEC_t; // 2 + 4 + 4 + 6 => 16 Bytes
 
-#define TO_ENTRY(x) static_cast<dataEntry_t*>(static_cast<void*>(x))
-#define TO_FEC(x) static_cast<dataEntryFEC_t*>(static_cast<void*>(x))
+#define TO_ENTRY(x) reinterpret_cast<dataEntry_t*>(x)
+#define TO_FEC(x) reinterpret_cast<dataEntryFEC_t*>(x)
 
 ///
 const uint8_t HEADER_ECC_LENGTH = 64;  // Max corrected bytes ECC_LENGTH/2
@@ -39,7 +39,7 @@ typedef struct
     char ecc[HEADER_ECC_LENGTH];
 } dataEntryHeader_t;
 
-#pragma pack()
+#pragma pack(pop)
 
 class RamBuffer {
 public:

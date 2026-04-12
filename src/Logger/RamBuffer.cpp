@@ -46,17 +46,31 @@ bool RamBuffer::IntegrityCheck()
     }
 
     dataEntryFEC_t* act = _header->first;
+    size_t oldErrors = 0;
+    size_t newErrors = 0;
 
     for (int i = 0; i < 2; i++) {
         while (act < _header->end) {
             if (act == _header->last) {
+                float errorRate = (float)(oldErrors + newErrors) / getUsedElements() * 100.0f;
+                MessageOutput.printf("Old errors: %d, New errors: %d, Total errors: %.2f%%\r\n", oldErrors, newErrors, errorRate);
+
+                if(errorRate > 10.0f) {
+                    MessageOutput.println("IntegrityCheck failed: Too many errors");
+                    return false;
+                }
                 MessageOutput.println("IntegrityCheck done");
                 return true;
             }
 
-            if (_rsData.Decode(act, act) > 0)
+            if(act->time == 0)
+            {
+                oldErrors++;
+            }
+            else if (_rsData.Decode(act, act) > 0)
             {
 				act->time = 0; // set time to 0 on ecc error, so it is ignored in getEntry
+                newErrors++;
             }
 
             //MessageOutput.printf("%x, %ld, %05.2f\r\n", act->serial, act->time, act->value);
@@ -177,27 +191,27 @@ bool RamBuffer::getBackup(ResponseFiller& responseFiller)
     responseFiller = [this, act](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
         if(alreadySent == 0) {
-            *act = static_cast<uint8_t*>(static_cast<void*>(_header->first));
+            *act = reinterpret_cast<uint8_t*>(_header->first);
         }
 
         size_t actLen = 0;
 
         // copy from first to end
-        if (*act < static_cast<uint8_t*>(static_cast<void*>(_header->end))) {
-            actLen = min(maxLen, static_cast<size_t>(static_cast<uint8_t*>(static_cast<void*>(_header->end)) - *act));
+        if (*act < reinterpret_cast<uint8_t*>(_header->end)) {
+            actLen = min(maxLen, static_cast<size_t>(reinterpret_cast<uint8_t*>(_header->end) - *act));
 
             memcpy(buffer, *act, actLen);
             ret += actLen;
             *act += actLen;
             buffer += actLen;
-            if(*act == static_cast<uint8_t*>(static_cast<void*>(_header->end))) {
-                *act = static_cast<uint8_t*>(static_cast<void*>(_header->start));
+            if(*act == reinterpret_cast<uint8_t*>(_header->end)) {
+                *act = reinterpret_cast<uint8_t*>(_header->start);
             }
         }
         // copy from start to last
         actLen = maxLen - actLen;
         if(actLen > 0) {
-            actLen = min(actLen, static_cast<size_t>(static_cast<uint8_t*>(static_cast<void*>(_header->last)) - *act));
+            actLen = min(actLen, static_cast<size_t>(reinterpret_cast<uint8_t*>(_header->last) - *act));
 
             memcpy(buffer, *act, actLen);
             ret += actLen;
@@ -212,7 +226,7 @@ bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t
 {
     if(alreadyWritten == 0) {
         PowerOnInitialize();
-        _restorePos = static_cast<uint8_t*>(static_cast<void*>(_header->first));
+        _restorePos = reinterpret_cast<uint8_t*>(_header->first);
     }
 
     if(alreadyWritten <= getTotalElements() * sizeof(dataEntryFEC_t)) {
@@ -227,7 +241,7 @@ bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t
 
     if(final) {
         // adjust _header->last
-        size_t entries = (_restorePos - static_cast<uint8_t*>(static_cast<void*>(_header->first))) / sizeof(dataEntryFEC_t);
+        size_t entries = (_restorePos - reinterpret_cast<uint8_t*>(_header->first)) / sizeof(dataEntryFEC_t);
         _header->last = _header->first + entries;
         _rsHeader.EncodeBlock(_header, _header->ecc);
         MessageOutput.printf("RamBuffer::restoreBackup final entries=%d, first=%d, last=%d\r\n", entries, toIndex(_header->first), toIndex(_header->last));
