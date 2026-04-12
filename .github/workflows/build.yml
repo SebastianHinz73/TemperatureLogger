@@ -1,6 +1,7 @@
 name: OpenDTU Build
 
 on:
+  workflow_dispatch:
   push:
     paths-ignore:
       - docs/**
