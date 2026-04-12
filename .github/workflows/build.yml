@@ -88,12 +88,18 @@ jobs:
       - name: Build firmware
         run: pio run -e ${{ matrix.environment }}
 
+      - name: Rename Firmware
+        run: mv .pio/build/${{ matrix.environment }}/firmware.bin .pio/build/${{ matrix.environment }}/templogger-${{ matrix.environment }}.bin
+
+      - name: Rename Factory Firmware
+        run: mv .pio/build/${{ matrix.environment }}/firmware.factory.bin .pio/build/${{ matrix.environment }}/templogger-${{ matrix.environment }}.factory.bin
+
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.environment }}
+          name: templogger-${{ matrix.environment }}
           path: |
-            .pio/build/${{ matrix.environment }}/${{ matrix.environment }}.bin
-            .pio/build/${{ matrix.environment }}/${{ matrix.environment }}.factory.bin
+            .pio/build/${{ matrix.environment }}/templogger-${{ matrix.environment }}.bin
+            .pio/build/${{ matrix.environment }}/templogger-${{ matrix.environment }}.factory.bin
 
   release:
     name: Create Release
@@ -122,7 +128,7 @@ jobs:
         run: |
           ls -R
           cd artifacts
-          for i in */; do cp ${i}*.bin ./; done
+          for i in */; do cp ${i}templogger-*.bin ./; done
 
       - name: Create release
         uses: softprops/action-gh-release@v1
