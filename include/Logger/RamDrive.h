@@ -38,6 +38,7 @@ private:
 private:
     RamBuffer* _ramBuffer;
     TimeoutMutex _mutexRamDrive;
+    volatile bool _restoreInProgress = false;
 
 private:
     static uint8_t* _ramDrive;
