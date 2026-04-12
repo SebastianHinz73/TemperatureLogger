@@ -18,20 +18,27 @@ public:
             }
             delay(10);
         }
-        if(millis() > _lockEnd)
+        if(_lockEnd > 0 && millis() > _lockEnd)
         {
-            unlock(); // force unlock
-            return TryLock(0, maxUse);
+            MessageOutput.println("TimeoutMutex: Force unlock");
+            std::mutex::unlock(); // force unlock
+            // Try once more without recursion
+            if(try_lock())
+            {
+                _lockEnd = millis() + maxUse;
+                return true;
+            }
         }
         return false;
     }
 
     void unlock()
     {
+        _lockEnd = 0;
         std::mutex::unlock();
     }
 
 private:
-    time_t _lockEnd;
+    unsigned long _lockEnd = 0;
 };
 

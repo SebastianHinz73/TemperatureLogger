@@ -84,7 +84,7 @@ void SDCardClass::writeValue(uint16_t serial, time_t time, float value)
 
 bool SDCardClass::getFile(uint16_t serial, time_t time_start, uint32_t length, ResponseFiller& responseFiller)
 {
-    responseFiller = [&, serial, time_start](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+    responseFiller = [this, serial, time_start](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
 
         //MessageOutput.printf("responseFiller 0x%X maxLen:%d, alreadySent:%d, start:%ld\r\n", serial, maxLen, alreadySent, time_start);
 

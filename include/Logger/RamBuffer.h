@@ -3,8 +3,11 @@
 
 #include <Arduino.h>
 #include "IDataStoreDevice.h"
+#include "RS-FEC.h"
 
-#pragma pack(2)
+#pragma pack(push, 2)
+const uint8_t DATAENTRY_ECC_LENGTH = 6;  // Max corrected bytes ECC_LENGTH/2
+
 typedef struct
 {
     uint16_t serial;
@@ -14,16 +17,29 @@ typedef struct
 
 typedef struct
 {
-    uint32_t id;
-    dataEntry_t* start;
-    dataEntry_t* first;
-    dataEntry_t* last;
-    dataEntry_t* end;
+    uint16_t serial;
+    time_t time;
+    float value;
+    char ecc[DATAENTRY_ECC_LENGTH];
+} dataEntryFEC_t; // 2 + 4 + 4 + 6 => 16 Bytes
+
+#define TO_ENTRY(x) reinterpret_cast<dataEntry_t*>(x)
+#define TO_FEC(x) reinterpret_cast<dataEntryFEC_t*>(x)
+
+///
+const uint8_t HEADER_ECC_LENGTH = 64;  // Max corrected bytes ECC_LENGTH/2
+const int HEADER_MSG_LENGTH = 4*sizeof(dataEntryFEC_t*);
+
+typedef struct
+{
+    dataEntryFEC_t* start;
+    dataEntryFEC_t* first;
+    dataEntryFEC_t* last;
+    dataEntryFEC_t* end;
+    char ecc[HEADER_ECC_LENGTH];
 } dataEntryHeader_t;
 
-#pragma pack()
-
-#define RAMBUFFER_HEADER_ID 0x12345678
+#pragma pack(pop)
 
 class RamBuffer {
 public:
@@ -36,18 +52,25 @@ public:
     bool getBackup(ResponseFiller& responseFiller);
     bool restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final);
 
-    time_t getOldestTime() const { return _header->first->time; }
+    time_t getOldestTime() const {
+        if (_header->first == _header->last) return 0;
+        return _header->first->time;
+    }
     time_t getNewestTime() const { return _header->last->time; }
 
     size_t getTotalElements() const { return _elements-1; }
     size_t getUsedElements() const { return _header->last >= _header->first ? _header->last - _header->first : getTotalElements(); }
 
 private:
-    int toIndex(const dataEntry_t* entry) const { return entry - _header->start; }
+    int toIndex(const dataEntryFEC_t* entry) const { return entry - _header->start; }
+    dataEntry_t* findStart(time_t time);
 
-public:
+private:
     dataEntryHeader_t* _header;
     size_t _elements;
     uint8_t* _cache;
     size_t _cacheSize;
+    uint8_t* _restorePos = nullptr;
+    RS::ReedSolomon<sizeof(dataEntry_t), DATAENTRY_ECC_LENGTH> _rsData;
+    RS::ReedSolomon<HEADER_MSG_LENGTH, HEADER_ECC_LENGTH> _rsHeader;
 };
