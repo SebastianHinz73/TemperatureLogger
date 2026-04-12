@@ -52,7 +52,8 @@ bool RamBuffer::IntegrityCheck()
     for (int i = 0; i < 2; i++) {
         while (act < _header->end) {
             if (act == _header->last) {
-                float errorRate = (float)(oldErrors + newErrors) / getUsedElements() * 100.0f;
+                size_t usedElements = getUsedElements();
+                float errorRate = usedElements == 0 ? 0.0f : (float)(oldErrors + newErrors) / usedElements * 100.0f;
                 MessageOutput.printf("Old errors: %d, New errors: %d, Total errors: %.2f%%\r\n", oldErrors, newErrors, errorRate);
 
                 if(errorRate > 10.0f) {
