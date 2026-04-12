@@ -5,6 +5,7 @@
 
 #include "Logger/RamBuffer.h"
 #include "MessageOutput.h"
+#include <memory>
 
 RamBuffer::RamBuffer(uint8_t* buffer, size_t size, uint8_t* cache, size_t cacheSize)
     : _header((dataEntryHeader_t*)buffer)
@@ -172,36 +173,36 @@ dataEntry_t* RamBuffer::findStart(time_t time)
 
 bool RamBuffer::getBackup(ResponseFiller& responseFiller)
 {
-    static uint8_t* act = nullptr;
+    auto act = std::make_shared<uint8_t*>(nullptr);
 
-    responseFiller = [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+    responseFiller = [this, act](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
         if(alreadySent == 0) {
-            act = static_cast<uint8_t*>(static_cast<void*>(_header->first));
+            *act = static_cast<uint8_t*>(static_cast<void*>(_header->first));
         }
 
         size_t actLen = 0;
 
         // copy from first to end
-        if (act < static_cast<uint8_t*>(static_cast<void*>(_header->end))) {
-            actLen = min(maxLen, static_cast<size_t>(static_cast<uint8_t*>(static_cast<void*>(_header->end)) - act));
+        if (*act < static_cast<uint8_t*>(static_cast<void*>(_header->end))) {
+            actLen = min(maxLen, static_cast<size_t>(static_cast<uint8_t*>(static_cast<void*>(_header->end)) - *act));
 
-            memcpy(buffer, act, actLen);
+            memcpy(buffer, *act, actLen);
             ret += actLen;
-            act += actLen;
+            *act += actLen;
             buffer += actLen;
-            if(act == static_cast<uint8_t*>(static_cast<void*>(_header->end))) {
-                act = static_cast<uint8_t*>(static_cast<void*>(_header->start));
+            if(*act == static_cast<uint8_t*>(static_cast<void*>(_header->end))) {
+                *act = static_cast<uint8_t*>(static_cast<void*>(_header->start));
             }
         }
         // copy from start to last
         actLen = maxLen - actLen;
         if(actLen > 0) {
-            actLen = min(actLen, static_cast<size_t>(static_cast<uint8_t*>(static_cast<void*>(_header->last)) - act));
+            actLen = min(actLen, static_cast<size_t>(static_cast<uint8_t*>(static_cast<void*>(_header->last)) - *act));
 
-            memcpy(buffer, act, actLen);
+            memcpy(buffer, *act, actLen);
             ret += actLen;
-            act += actLen;
+            *act += actLen;
         }
         return ret;
     };
@@ -210,17 +211,15 @@ bool RamBuffer::getBackup(ResponseFiller& responseFiller)
 
 bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final)
 {
-    static uint8_t* act = nullptr;
-
     if(alreadyWritten == 0) {
         PowerOnInitialize();
-        act = static_cast<uint8_t*>(static_cast<void*>(_header->first));
+        _restorePos = static_cast<uint8_t*>(static_cast<void*>(_header->first));
     }
 
     if(alreadyWritten <= getTotalElements() * sizeof(dataEntryFEC_t)) {
         len = min(len, getTotalElements() * sizeof(dataEntryFEC_t) - alreadyWritten);
-        memcpy(act, data, len);
-        act += len;
+        memcpy(_restorePos, data, len);
+        _restorePos += len;
     }
     else
     {
@@ -229,7 +228,7 @@ bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t
 
     if(final) {
         // adjust _header->last
-        size_t entries = (act - static_cast<uint8_t*>(static_cast<void*>(_header->first))) / sizeof(dataEntryFEC_t);
+        size_t entries = (_restorePos - static_cast<uint8_t*>(static_cast<void*>(_header->first))) / sizeof(dataEntryFEC_t);
         _header->last = _header->first + entries;
         _rsHeader.EncodeBlock(_header, _header->ecc);
         MessageOutput.printf("RamBuffer::restoreBackup final entries=%d, first=%d, last=%d\r\n", entries, toIndex(_header->first), toIndex(_header->last));
@@ -242,6 +241,7 @@ bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t
             }
             MessageOutput.printf("Cache %d\r\n", sum); // make sure the compiler does not optimize the loop away
         }
+        _restorePos = nullptr;
     }
 
 

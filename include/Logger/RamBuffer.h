@@ -70,6 +70,7 @@ private:
     size_t _elements;
     uint8_t* _cache;
     size_t _cacheSize;
+    uint8_t* _restorePos = nullptr;
     RS::ReedSolomon<sizeof(dataEntry_t), DATAENTRY_ECC_LENGTH> _rsData;
     RS::ReedSolomon<HEADER_MSG_LENGTH, HEADER_ECC_LENGTH> _rsHeader;
 };

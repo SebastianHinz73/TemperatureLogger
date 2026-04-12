@@ -6,6 +6,7 @@
 #include "Logger/RamDrive.h"
 #include "MessageOutput.h"
 #include "PinMapping.h"
+#include <memory>
 
 RamDriveClass* pRamDrive = nullptr;
 
@@ -56,12 +57,12 @@ void RamDriveClass::FreeRamDrive()
 }
 
 void RamDriveClass::writeValue(uint16_t serial, time_t time, float value)
-{/*
+{
     if(_mutexRamDrive.TryLock(0, 100))
     {
         _ramBuffer->writeValue(serial, time, value);
         _mutexRamDrive.unlock();
-    }*/
+    }
 }
 
 bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, ResponseFiller& responseFiller)
@@ -71,23 +72,22 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
         return false;
     }
 
-    static dataEntry_t* act;
-    act = nullptr;
+    auto act = std::make_shared<dataEntry_t*>(nullptr);
 
-    responseFiller = [&, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+    responseFiller = [this, act, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
 
         //MessageOutput.printf("responseFiller 0x%X, maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
         const int EntrySize = 20; // typically entry count 17
         while (maxLen - ret > EntrySize) {
-            if (!_ramBuffer->getEntry(serial, start, act)) {
+            if (!_ramBuffer->getEntry(serial, start, *act)) {
                 break;
             }
-            if (act->time > start + length) {
+            if ((*act)->time > start + length) {
                 break;
             }
             // e.g. 1766675463;19.12\n
-            int written = snprintf((char*)&buffer[ret], EntrySize, "%ld;%.2f\n", act->time, act->value);
+            int written = snprintf((char*)&buffer[ret], EntrySize, "%ld;%.2f\n", (*act)->time, (*act)->value);
             ret += written;
         }
 

@@ -10,6 +10,7 @@
 #include "WebApi.h"
 #include "defaults.h"
 #include <AsyncJson.h>
+#include <memory>
 #include "mbedtls/base64.h"
 #include <RestartHelper.h>
 
@@ -199,7 +200,7 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
         return;
     }
 
-    static ResponseFiller responseFiller;
+    auto responseFiller = std::make_shared<ResponseFiller>();
     AsyncWebServerResponse* response = nullptr;
 
     try {
@@ -210,15 +211,15 @@ void WebApiWsLiveClass::onGraphData(AsyncWebServerRequest* request)
             time_t start = request->getParam("start")->value().toInt();
             uint32_t length = request->getParam("length")->value().toInt();
 
-            if (!Datastore.getTemperatureFile(serial, start, length, responseFiller)) {
+            if (!Datastore.getTemperatureFile(serial, start, length, *responseFiller)) {
                 MessageOutput.print("WebApi_ws_live: Can not get file.\r\n");
                 request->send(200);
                 _mutexFileReponse.unlock();
                 return;
             }
 
-            response = request->beginChunkedResponse("text/plain", [&](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-                int send = responseFiller(buffer, maxLen, alreadySent);
+            response = request->beginChunkedResponse("text/plain", [this, responseFiller](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+                int send = (*responseFiller)(buffer, maxLen, alreadySent);
                 //MessageOutput.printf("WebApi_ws_live: responseFiller returned %d bytes\r\n", send);
                 if(send == 0) {
                     _mutexFileReponse.unlock();
@@ -264,7 +265,7 @@ void WebApiWsLiveClass::onBackup(AsyncWebServerRequest* request)
         return;
     }
 
-    static ResponseFiller responseFiller;
+    auto responseFiller = std::make_shared<ResponseFiller>();
     AsyncWebServerResponse* response = nullptr;
 
     try {
@@ -275,15 +276,15 @@ void WebApiWsLiveClass::onBackup(AsyncWebServerRequest* request)
         }
 
         size_t usedBytes = pRamDrive->getUsedBytes();
-        if (!Datastore.getBackup(responseFiller)) {
+        if (!Datastore.getBackup(*responseFiller)) {
             MessageOutput.print("WebApi_ws_live: Can not get backup.\r\n");
             request->send(200);
             _mutexFileReponse.unlock();
             return;
         }
 
-        response = request->beginResponse("text/plain", usedBytes, [&, usedBytes](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
-            int send = responseFiller(buffer, maxLen, alreadySent);
+        response = request->beginResponse("text/plain", usedBytes, [this, responseFiller, usedBytes](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+            int send = (*responseFiller)(buffer, maxLen, alreadySent);
 
             if(alreadySent + send >= usedBytes) {
                 _mutexFileReponse.unlock();
