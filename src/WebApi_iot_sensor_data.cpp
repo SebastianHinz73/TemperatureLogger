@@ -101,6 +101,7 @@ void WebApiIotSensorData::onFile(AsyncWebServerRequest* request)
         } else {
             DS18B20SENSOR_CONFIG_T* config = Configuration.getFirstDS18B20Config();
             if (config == nullptr) {
+                _mutex.unlock();
                 request->send(404);
                 return;
             }
@@ -113,6 +114,7 @@ void WebApiIotSensorData::onFile(AsyncWebServerRequest* request)
         auto responseFiller = std::make_shared<ResponseFiller>();
         if (!Datastore.getTemperatureFile(serial, mktime(&timeinfo), 24*60*60, *responseFiller)) {
             MessageOutput.print("WebApiIotSensorData: Can not get file.\r\n");
+            _mutex.unlock();
             request->send(404);
             return;
         }
@@ -129,8 +131,10 @@ void WebApiIotSensorData::onFile(AsyncWebServerRequest* request)
     } catch (const std::bad_alloc& bad_alloc) {
         MessageOutput.printf("Call to /file temporarely out of resources. Reason: \"%s\".\r\n", bad_alloc.what());
         WebApi.sendTooManyRequests(request);
+        _mutex.unlock();
     } catch (const std::exception& exc) {
         MessageOutput.printf("Unknown exception in /file. Reason: \"%s\".\r\n", exc.what());
         WebApi.sendTooManyRequests(request);
+        _mutex.unlock();
     }
 }
