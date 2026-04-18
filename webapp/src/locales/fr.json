@@ -244,7 +244,9 @@
         "LargestFreeBlock": "Biggest contiguous free block",
         "MaxUsage": "Maximum usage since start",
         "Fragmentation": "Level of fragmentation",
-        "RamDriveStart": "Date de lancement du RamDrive"
+        "RamDriveStart": "Date de lancement du RamDrive",
+        "RamDriveError": "Date de lancement du RamDrive",
+        "RamDriveReboot": "Date de lancement du RamDrive"
     },
     "radioinfo": {
         "RadioInformation": "Informations sur la radio",
