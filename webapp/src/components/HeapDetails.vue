@@ -25,9 +25,17 @@
                             }})
                         </td>
                     </tr>
-                    <tr>
+                    <tr v-if="RamdriveExists()">
                         <th>{{ $t('heapdetails.RamDriveStart') }}</th>
-                        <td>{{ getOldestRamdrive() }}</td>
+                        <td>{{ getRamdriveOldest() }}</td>
+                    </tr>
+                    <tr v-if="RamdriveExists()">
+                        <th>{{ $t('heapdetails.RamDriveReboot') }}</th>
+                        <td>{{ getRamdriveReboot() }}</td>
+                    </tr>
+                    <tr v-if="RamdriveExists()">
+                        <th>{{ $t('heapdetails.RamDriveError') }}</th>
+                        <td>{{ getRamdriveError() }}</td>
                     </tr>
                 </tbody>
             </table>
@@ -60,7 +68,7 @@ export default defineComponent({
         getFragmentation() {
             return 1 - this.systemStatus.heap_max_block / this.getFreeHeap();
         },
-        getOldestRamdrive() {
+        getRamdriveOldest() {
             if(this.systemStatus.ramdrive_oldest == 0) {
                 return "n.a.";
             }
@@ -72,6 +80,15 @@ export default defineComponent({
                 return arr[0]?? "";
             }
             return str;
+        },
+        getRamdriveReboot() {
+            return this.systemStatus.ramdrive_reboot;
+        },
+        getRamdriveError() {
+            return this.systemStatus.ramdrive_error;
+        },
+        RamdriveExists() {
+            return this.systemStatus.ramdrive_oldest != null && this.systemStatus.ramdrive_oldest !== 0;
         },
     },
 });

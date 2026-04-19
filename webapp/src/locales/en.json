@@ -231,7 +231,9 @@
         "LargestFreeBlock": "Biggest contiguous free block",
         "MaxUsage": "Maximum usage since start",
         "Fragmentation": "Level of fragmentation",
-        "RamDriveStart": "RamDrive start date"
+        "RamDriveStart": "RamDrive start datetime",
+        "RamDriveError": "RamDrive error count",
+        "RamDriveReboot": "RamDrive reboot count"
     },
     "taskdetails": {
         "TaskDetails": "Task Details",

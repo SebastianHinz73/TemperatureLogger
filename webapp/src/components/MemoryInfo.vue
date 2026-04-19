@@ -17,12 +17,12 @@
                         :total="systemStatus.heap_total"
                         :used="systemStatus.heap_used"
                     />
-                    <FsInfo
+                    <FsInfo v-if="systemStatus.psram_total > 0"
                         :name="$t('memoryinfo.PsRam')"
                         :total="systemStatus.psram_total"
                         :used="systemStatus.psram_used"
                     />
-                    <FsInfo
+                    <FsInfo v-if="systemStatus.ramdrive_total > 0"
                         :name="$t('memoryinfo.RamDrive')"
                         :total="systemStatus.ramdrive_total"
                         :used="systemStatus.ramdrive_used"

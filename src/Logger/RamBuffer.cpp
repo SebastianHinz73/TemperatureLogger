@@ -24,10 +24,12 @@ void RamBuffer::PowerOnInitialize()
     _header->first = _header->start;
     _header->last = _header->start;
     _header->end = &_header->start[_elements];
+    _header->rebootCount = 0;
+    _header->errorCount = 0;
 
     _rsHeader.EncodeBlock(_header, _header->ecc);
 
-    _header->first->time = 0;
+    _header->first->entry.time = 0;
 
     // PSRAM uses cache which is cleared after reset -> trigger a flush of the PSRAM-cache to the PSRAM.
     if (_cache != nullptr) {
@@ -44,6 +46,7 @@ bool RamBuffer::IntegrityCheck()
         MessageOutput.println("RamBuffer header ecc failed");
         return false;
     }
+    _header->rebootCount++;
 
     dataEntryFEC_t* act = _header->first;
     size_t oldErrors = 0;
@@ -60,21 +63,25 @@ bool RamBuffer::IntegrityCheck()
                     MessageOutput.println("IntegrityCheck failed: Too many errors");
                     return false;
                 }
+                _header->errorCount = oldErrors + newErrors;
+                _rsHeader.EncodeBlock(_header, _header->ecc);
+                flushCache();
+
                 MessageOutput.println("IntegrityCheck done");
                 return true;
             }
 
-            if(act->time == 0)
+            if(act->entry.time == 0)
             {
                 oldErrors++;
             }
             else if (_rsData.Decode(act, act) > 0)
             {
-				act->time = 0; // set time to 0 on ecc error, so it is ignored in getEntry
+                act->entry.time = 0; // set time to 0 on ecc error, so it is ignored in getEntry
                 newErrors++;
             }
 
-            //MessageOutput.printf("%x, %ld, %05.2f\r\n", act->serial, act->time, act->value);
+            //MessageOutput.printf("%x, %ld, %05.2f\r\n", act->entry.serial, act->entry.time, act->entry.value);
             act++;
         }
         act = _header->start;
@@ -86,12 +93,12 @@ bool RamBuffer::IntegrityCheck()
 
 void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
 {
-    _header->last->serial = serial;
-    _header->last->time = time;
-    _header->last->value = value;
+    _header->last->entry.serial = serial;
+    _header->last->entry.time = time;
+    _header->last->entry.value = value;
      //MessageOutput.printf("writeValue: ## %d: 0x%x, (%ld, %05.2f)\r\n", toIndex(_header->last), _header->last->serial, _header->last->time, _header->last->value);
 
-     _rsData.EncodeBlock(_header->last, _header->last->ecc);
+    _rsData.EncodeBlock(_header->last, _header->last->ecc);
 
     _header->last++;
 
@@ -108,14 +115,7 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
         }
     }
     _rsHeader.EncodeBlock(_header, _header->ecc);
-
-    if (_cache != nullptr) {
-        // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
-        volatile uint32_t sum = 0;
-        for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
-            sum += ((volatile uint32_t*)_cache)[i];
-        }
-    }
+    flushCache();
 }
 
 bool RamBuffer::getEntry(uint16_t serial, time_t time, dataEntry_t*& act)
@@ -123,29 +123,29 @@ bool RamBuffer::getEntry(uint16_t serial, time_t time, dataEntry_t*& act)
     // start with _header->first, then increment
     if (act == nullptr) {
         act = findStart(time);
-    } else if (act == TO_ENTRY(_header->last)) {
+    } else if (act == toEntry(_header->last)) {
         return false;
     } else {
-        act = TO_ENTRY(TO_FEC(act)+1);
+        act = toEntry(toFec(act) + 1);
     }
 
     for (int i = 0; i < 2; i++) {
-        while (act < TO_ENTRY(_header->end)) {
+        while (act < toEntry(_header->end)) {
 
             // end check
-            if (act->time >= time + 24 * 60 * 60 || act == TO_ENTRY(_header->last)) {
+            if (act->time >= time + 24 * 60 * 60 || act == toEntry(_header->last)) {
                 return false;
             }
 
             // ecc && serial && time check
             if (act->time == 0 || serial != act->serial || act->time < time) {
-                act = TO_ENTRY(TO_FEC(act) + 1);
+                act = toEntry(toFec(act) + 1);
                 continue;
             }
 
             return true;
         }
-        act = TO_ENTRY(_header->start); // start again with _header->start
+        act = toEntry(_header->start); // start again with _header->start
     }
     return false;
 }
@@ -154,7 +154,7 @@ dataEntry_t* RamBuffer::findStart(time_t time)
 {
     size_t count = getUsedElements();
     if (count == 0) {
-        return TO_ENTRY(_header->last);
+        return toEntry(_header->last);
     }
 
     size_t capacity = _header->end - _header->start;
@@ -169,7 +169,7 @@ dataEntry_t* RamBuffer::findStart(time_t time)
             p -= capacity;
         }
 
-        if (p->time == 0 || p->time < time) {
+        if (p->entry.time == 0 || p->entry.time < time) {
             lo = mid + 1;
         } else {
             hi = mid;
@@ -182,7 +182,7 @@ dataEntry_t* RamBuffer::findStart(time_t time)
         result -= capacity;
     }
 
-    return (lo >= count) ? TO_ENTRY(_header->last) : TO_ENTRY(result);
+    return (lo >= count) ? toEntry(_header->last) : toEntry(result);
 }
 
 bool RamBuffer::getBackup(ResponseFiller& responseFiller)
@@ -247,16 +247,20 @@ bool RamBuffer::restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t
         _rsHeader.EncodeBlock(_header, _header->ecc);
         MessageOutput.printf("RamBuffer::restoreBackup final entries=%d, first=%d, last=%d\r\n", entries, toIndex(_header->first), toIndex(_header->last));
 
-        if (_cache != nullptr) {
-            // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
-            volatile uint32_t sum = 0;
-            for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
-                sum += ((volatile uint32_t*)_cache)[i];
-            }
-        }
+        flushCache();
         _restorePos = nullptr;
     }
 
-
     return true;
+}
+
+void RamBuffer::flushCache()
+{
+    if (_cache != nullptr) {
+        // Here _cache is used to read from another PSRAM area and thus trigger a flush of the PSRAM-cache to the PSRAM.
+        volatile uint32_t sum = 0;
+        for (uint32_t i = 0; i < 64 * 1024 / sizeof(uint32_t); i++) {
+            sum += ((volatile uint32_t*)_cache)[i];
+        }
+    }
 }
