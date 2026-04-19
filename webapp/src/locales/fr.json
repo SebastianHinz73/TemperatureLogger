@@ -245,8 +245,8 @@
         "MaxUsage": "Maximum usage since start",
         "Fragmentation": "Level of fragmentation",
         "RamDriveStart": "Date de lancement du RamDrive",
-        "RamDriveError": "Date de lancement du RamDrive",
-        "RamDriveReboot": "Date de lancement du RamDrive"
+        "RamDriveError": "Nombre d'erreurs RamDrive",
+        "RamDriveReboot": "Nombre de redémarrages du RamDrive"
     },
     "radioinfo": {
         "RadioInformation": "Informations sur la radio",

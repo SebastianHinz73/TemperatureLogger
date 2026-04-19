@@ -231,7 +231,7 @@
         "LargestFreeBlock": "Größter zusammenhängender freier Block",
         "MaxUsage": "Maximale Speichernutzung seit Start",
         "Fragmentation": "Grad der Fragmentierung",
-        "RamDriveStart": "Ram Drive Startdatum",
+        "RamDriveStart": "RamDrive Startdatum",
         "RamDriveError": "RamDrive Anzahl Fehler",
         "RamDriveReboot": "RamDrive Anzahl Reboots"
      },
