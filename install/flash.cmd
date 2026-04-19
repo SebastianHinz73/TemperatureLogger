@@ -51,12 +51,12 @@ set /p SELECTED=Your choice:
 if "%SELECTED%" == "x" goto :loop
 if "%SELECTED%" == "1" (
 set ESP32TYPE=esp32
-set BINFOLDER=generic_esp32
+set BINFOLDER=templogger-generic_esp32
 goto :loop
 )
 if "%SELECTED%" == "2" (
 set ESP32TYPE=esp32-s3
-set BINFOLDER=generic_esp32s3_N16R8
+set BINFOLDER=templogger-generic_esp32s3_N16R8
 goto :loop
 )
 goto :errorInput 
@@ -72,7 +72,7 @@ goto :loop
 
 :TemperatureLogger
 @echo on
-esptool.exe -p %COMPORT% --chip %ESP32TYPE% write_flash 0x0 %BINFOLDER%\firmware.factory.bin
+esptool.exe -p %COMPORT% --chip %ESP32TYPE% write_flash 0x0 %BINFOLDER%\%BINFOLDER%.factory.bin
 
 @echo off
 echo.
