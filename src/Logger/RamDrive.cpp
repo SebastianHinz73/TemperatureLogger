@@ -76,12 +76,29 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
     }
 
     auto act = std::make_shared<dataEntry_t*>(nullptr);
+    auto startValueSent = std::make_shared<bool>(false);
 
-    responseFiller = [this, act, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
+    responseFiller = [this, act, startValueSent, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
+        const int EntrySize = 20; // typically entry count 17
 
         //MessageOutput.printf("responseFiller 0x%X, maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
-        const int EntrySize = 20; // typically entry count 17
+
+        // Send the last value before the requested range as start value once,
+        // so the graph already starts at the left edge of the requested range.
+        // Only values within the last 20 minutes before the range are considered.
+        if (!*startValueSent) {
+            *startValueSent = true;
+            if (maxLen - ret > EntrySize) {
+                dataEntry_t prevEntry;
+                if (_ramBuffer->getPreviousEntry(serial, start, prevEntry)) {
+                    // e.g. 1766675463;19.12\n
+                    int written = snprintf((char*)&buffer[ret], EntrySize, "%ld;%.2f\n", start, prevEntry.value);
+                    ret += written;
+                }
+            }
+        }
+
         while (maxLen - ret > EntrySize) {
             if (!_ramBuffer->getEntry(serial, start, *act)) {
                 break;

@@ -185,6 +185,52 @@ dataEntry_t* RamBuffer::findStart(time_t time)
     return (lo >= count) ? toEntry(_header->last) : toEntry(result);
 }
 
+bool RamBuffer::getPreviousEntry(uint16_t serial, time_t time, dataEntry_t& entry)
+{
+    size_t count = getUsedElements();
+    if (count == 0) {
+        return false;
+    }
+
+    // Binary search at (requested time - 20 minutes), then scan forward.
+    // Only values within the last 20 minutes before the requested time are considered.
+    const time_t searchTime = time - 20 * 60;
+
+    dataEntry_t* firstAfter = findStart(searchTime);
+    if (firstAfter == toEntry(_header->last)) {
+        // no entry in the last 20 minutes before the requested time
+        return false;
+    }
+
+    dataEntryFEC_t* act = toFec(firstAfter);
+    bool found = false;
+    dataEntry_t lastMatch;
+
+    for (size_t i = 0; i < count; i++) {
+        if (act == _header->last) {
+            break;
+        }
+        if (act->entry.time >= time) {
+            break;
+        }
+        if (act->entry.time != 0 && act->entry.serial == serial) {
+            lastMatch = act->entry;
+            found = true;
+        }
+
+        act++;
+        if (act == _header->end) {
+            act = _header->start;
+        }
+    }
+
+    if (found) {
+        entry = lastMatch;
+        return true;
+    }
+    return false;
+}
+
 bool RamBuffer::getBackup(ResponseFiller& responseFiller)
 {
     auto act = std::make_shared<uint8_t*>(nullptr);

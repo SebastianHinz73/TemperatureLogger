@@ -50,6 +50,7 @@ public:
 
     void writeValue(uint16_t serial, time_t time, float value);
     bool getEntry(uint16_t serial, time_t time, dataEntry_t*& act);
+    bool getPreviousEntry(uint16_t serial, time_t time, dataEntry_t& entry);
     bool getBackup(ResponseFiller& responseFiller);
     bool restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final);
 
