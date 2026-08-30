@@ -70,6 +70,9 @@ void MqttHandleHassClass::publishConfig()
     publishDtuSensor("Ramdrive oldest entry", "ramdrive/oldest_entry", "", "mdi:calendar-clock", DEVICE_CLS_NONE, STATE_CLS_NONE, CATEGORY_DIAGNOSTIC);
 
     for (uint8_t i = 0; i < Configuration.getConfiguredSensorCnt(); i++) {
+        if (!config.DS18B20.Sensors[i].Visible) {
+            continue;
+        }
         publishDS18B20Sensor(config.DS18B20.Sensors[i].Name, String(config.DS18B20.Sensors[i].Serial, 16), config.DS18B20.Fahrenheit ? "°F" : "°C", "", DEVICE_CLS_TEMPERATURE, STATE_CLS_MEASUREMENT, CATEGORY_NONE);
     }
 }

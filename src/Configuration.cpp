@@ -400,7 +400,9 @@ bool ConfigurationClass::addSensor(uint16_t serial)
     }
 
     // new sensor found
+    bool isNewSensor = false;
     if (actSensor == nullptr) {
+        isNewSensor = true;
         for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
             // find free slot with Serial 0
             if (config.DS18B20.Sensors[i].Serial == 0) {
@@ -415,6 +417,9 @@ bool ConfigurationClass::addSensor(uint16_t serial)
 
     if (actSensor != nullptr) {
         actSensor->Serial = serial;
+        if (isNewSensor) {
+            actSensor->Visible = true;
+        }
     }
 
     return actSensor != nullptr;
