@@ -49,8 +49,8 @@ public:
     void flushCache();
 
     void writeValue(uint16_t serial, time_t time, float value);
-    bool getEntry(uint16_t serial, time_t time, dataEntry_t*& act);
-    bool getPreviousEntry(uint16_t serial, time_t time, dataEntry_t& entry);
+    bool getFirstEntry(uint16_t serial, time_t time, dataEntry_t*& act, dataEntry_t& ret);
+    bool getNextEntry(uint16_t serial, time_t time, dataEntry_t*& act);
     bool getBackup(ResponseFiller& responseFiller);
     bool restoreBackup(size_t alreadyWritten, const uint8_t* data, size_t len, bool final);
 
@@ -67,6 +67,7 @@ public:
 private:
     int toIndex(const dataEntryFEC_t* entry) const { return entry - _header->start; }
     dataEntry_t* findStart(time_t time);
+    bool getEntry(uint16_t serial, time_t time, dataEntry_t*& act);
 
 private:
     dataEntryHeader_t* _header;
