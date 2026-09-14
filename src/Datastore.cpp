@@ -45,6 +45,17 @@ void DatastoreClass::addValue(uint16_t serial, float value)
     if (_device == nullptr)
         return;
 
+    // Do not store data for sensors that are not visible
+    const CONFIG_T& config = Configuration.get();
+    for (uint8_t i = 0; i < TEMPLOGGER_MAX_COUNT; i++) {
+        if (config.DS18B20.Sensors[i].Serial == serial) {
+            if (!config.DS18B20.Sensors[i].Visible) {
+                return;
+            }
+            break;
+        }
+    }
+
     for (const auto& entry : _list) {
         if (entry->Serial() != serial) {
             continue;

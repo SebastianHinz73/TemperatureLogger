@@ -79,11 +79,25 @@ bool RamDriveClass::getFile(uint16_t serial, time_t start, uint32_t length, Resp
 
     responseFiller = [this, act, serial, start, length](uint8_t* buffer, size_t maxLen, size_t alreadySent) -> size_t {
         size_t ret = 0;
+        const int EntrySize = 20; // typically entry count 17
 
         //MessageOutput.printf("responseFiller 0x%X, maxLen:%d, alreadySent:%d, start:%ld, length:%d\r\n", serial, maxLen, alreadySent, start, length);
-        const int EntrySize = 20; // typically entry count 17
+
+        if(*act == nullptr && maxLen - ret > EntrySize) {
+            dataEntry_t first;
+            if(!_ramBuffer->getFirstEntry(serial, start, *act, first))
+            {
+                _mutexRamDrive.unlock();
+                return 0;
+            }
+            if (first.time <= start + length) {
+                int written = snprintf((char*)&buffer[ret], EntrySize, "%ld;%.2f\n", first.time, first.value);
+                ret += written;
+            }
+        }
+
         while (maxLen - ret > EntrySize) {
-            if (!_ramBuffer->getEntry(serial, start, *act)) {
+            if (!_ramBuffer->getNextEntry(serial, start, *act)) {
                 break;
             }
             if ((*act)->time > start + length) {

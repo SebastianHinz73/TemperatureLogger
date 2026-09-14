@@ -118,17 +118,35 @@ void RamBuffer::writeValue(uint16_t serial, time_t time, float value)
     flushCache();
 }
 
-bool RamBuffer::getEntry(uint16_t serial, time_t time, dataEntry_t*& act)
+bool RamBuffer::getFirstEntry(uint16_t serial, time_t time, dataEntry_t*& act, dataEntry_t& ret)
 {
-    // start with _header->first, then increment
-    if (act == nullptr) {
-        act = findStart(time);
-    } else if (act == toEntry(_header->last)) {
+    // start with _header->first
+    act = findStart(time);
+    if (!getEntry(serial, time, act)) {
+        return false;
+    }
+    ret = *act;
+    // start time correction
+    if (ret.time - time < 10 * 60) {
+        ret.time = time;
+    }
+    return true;
+}
+
+bool RamBuffer::getNextEntry(uint16_t serial, time_t time, dataEntry_t*& act)
+{
+    // increment
+    if (act == toEntry(_header->last)) {
         return false;
     } else {
         act = toEntry(toFec(act) + 1);
     }
 
+    return getEntry(serial, time, act);
+}
+
+bool RamBuffer::getEntry(uint16_t serial, time_t time, dataEntry_t*& act)
+{
     for (int i = 0; i < 2; i++) {
         while (act < toEntry(_header->end)) {
 
