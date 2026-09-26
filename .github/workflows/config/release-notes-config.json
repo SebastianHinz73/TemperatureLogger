@@ -30,7 +30,7 @@
         }
     ],
     "template": "${{CHANGELOG}}",
-    "pr_template": "- [${{TITLE}}](https://github.com/tbnobody/OpenDTU/commit/${{MERGE_SHA}})",
+    "pr_template": "- [${{TITLE}}](https://github.com/SebastianHinz73/TemperatureLogger/commit/${{MERGE_SHA}})",
     "empty_template": "- no changes",
     "label_extractor": [
         {
@@ -45,6 +45,10 @@
         }
     ],
     "tag_resolver": {
-        "method": "semver"
+        "method": "semver",
+        "transformer": {
+            "pattern": "^V\\.?",
+            "target": ""
+        }
     }
 }
