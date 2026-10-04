@@ -14,7 +14,7 @@ The project is licensed under an Open Source License ( GNU General Public Licens
 - MQTT support with Home Assistant Auto Discovery
 - Support for ESP32 or ESP32-S3 (an ESP32-S3 chip with PSRAM is recommended)
 - Data can be stored on SD cards. Thats recommended for ESP32 boards.
-- Data can be stored in PSRam (6MByte). Thats recommended for ESP32-S3 N16N8. The data there will also survive a software board reset. This works very well up to 30 days. Error detection and correction is used.
+- Data can be stored in PSRam (6MByte). Thats recommended for ESP32-S3 N16R8. The data there will also survive a software board reset. This works very well up to 30 days. Error detection and correction is used.
 - Data can be stored in RAM (4KBytes). That's not really recommended, since the memory can only hold about 240 entries.
 - Export and import of data in PSRam
 - Pins for sensors, display etc. are configurable
