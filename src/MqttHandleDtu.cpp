@@ -34,7 +34,7 @@ void MqttHandleDtuClass::loop()
     }
 
     char buf[20] = {0};
-    time_t t = pRamDrive->getOldestTime();
+    time_t t = pRamDrive != nullptr ? pRamDrive->getOldestTime() : 0;
     if(t != 0) {
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", localtime(&t));
     }
