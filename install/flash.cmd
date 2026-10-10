@@ -2,7 +2,7 @@
 @echo off
 SET COMPORT=COM3
 SET ESP32TYPE=esp32
-SET BINFOLDER=generic_esp32
+SET BINFOLDER=templogger-generic_esp32
 
 :loop
 cls
@@ -64,7 +64,7 @@ goto :errorInput
 
 :BoardInfo
 @echo on
-esptool.exe --chip %ESP32TYPE% --port %COMPORT% chip_id
+esptool.exe --chip %ESP32TYPE% --port %COMPORT% chip-id
 @echo off
 echo.
 pause
@@ -72,7 +72,7 @@ goto :loop
 
 :TemperatureLogger
 @echo on
-esptool.exe -p %COMPORT% --chip %ESP32TYPE% write_flash 0x0 %BINFOLDER%\%BINFOLDER%.factory.bin
+esptool.exe -p %COMPORT% --chip %ESP32TYPE% write-flash 0x0 %BINFOLDER%\%BINFOLDER%.factory.bin
 
 @echo off
 echo.
@@ -81,7 +81,7 @@ goto :loop
 
 :Delete
 @echo on
-esptool.exe --port %COMPORT% --chip %ESP32TYPE% erase_flash
+esptool.exe --port %COMPORT% --chip %ESP32TYPE% erase-flash
 @echo off
 echo.
 pause
