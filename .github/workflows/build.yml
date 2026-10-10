@@ -101,6 +101,64 @@ jobs:
             .pio/build/${{ matrix.environment }}/templogger-${{ matrix.environment }}.bin
             .pio/build/${{ matrix.environment }}/templogger-${{ matrix.environment }}.factory.bin
 
+  update-install-binaries:
+    name: Open PR with firmware binaries
+    runs-on: ubuntu-latest
+    needs: [get_default_envs, build]
+    # Only for a manual run on the master branch. A run on a tag creates the release instead.
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Copy firmware binaries into install directory
+        run: |
+          for dir in artifacts/*/; do
+            environment="$(basename "$dir")"
+            mkdir -p "install/$environment"
+            cp "$dir$environment.bin" "$dir$environment.factory.bin" "install/$environment/"
+          done
+          rm -rf artifacts
+
+      - name: Check that all binaries were copied
+        run: |
+          found=$(ls -1 install/*/*.bin 2>/dev/null | wc -l)
+          echo "Found $found binary files in install/"
+          [ "$found" -eq 4 ] || { echo "Expected 4 binaries, got $found"; exit 1; }
+
+      - name: Read version from source
+        id: version
+        run: |
+          version=$(sed -n 's/^#define TEMP_LOGGER_VERSION "\(.*\)".*/\1/p' include/Logger/DS18B20List.h | tr -d '\r')
+          echo "version=$version" >> $GITHUB_OUTPUT
+
+      - uses: peter-evans/create-pull-request@v6
+        with:
+          branch: ci/install-binaries
+          delete-branch: true
+          add-paths: install
+          commit-message: |
+            install: update firmware binaries to ${{ steps.version.outputs.version }} (CI build #${{ github.run_number }})
+          title: "install: update firmware binaries to ${{ steps.version.outputs.version }}"
+          body: |
+            Automated update of the firmware binaries in the `install` directory.
+
+            - Version: `${{ steps.version.outputs.version }}`
+            - Source commit: `${{ github.sha }}`
+            - Workflow run: #${{ github.run_number }}
+
+            The binaries were built by the *TemperatureLogger Build* workflow and copied into
+            `install/<environment>/` for every environment configured in `custom_ci_action`.
+
+            Please review and merge this PR before creating the release tag, otherwise the
+            `install` directory of the release will still contain the previous binaries.
+
   release:
     name: Create Release
     runs-on: ubuntu-latest
