@@ -2,6 +2,11 @@ name: TemperatureLogger Build
 
 on:
   workflow_dispatch:
+    inputs:
+      monitor_version:
+        description: "TemperaturMonitor version from SebastianHinz73/Tools to attach to the release"
+        required: false
+        default: "1.0.0"
 
 jobs:
   get_default_envs:
@@ -209,6 +214,51 @@ jobs:
           (cd staging && zip -r "$GITHUB_WORKSPACE/install_v${version}.zip" install)
           unzip -l "install_v${version}.zip"
 
+      - name: Download TemperaturMonitor from the Tools repository
+        env:
+          GH_TOKEN: ${{ secrets.TOOLS_TOKEN }}
+          VERSION: ${{ inputs.monitor_version }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p monitor
+
+          # Look the assets up by name so that the tag naming of the Tools repository does not matter
+          gh api "repos/SebastianHinz73/Tools/releases?per_page=100" \
+            --jq '.[].assets[] | "\(.name)\t\(.id)"' > monitor/assets.tsv
+
+          asset_id() { awk -v name="$1" '$1 == name { print $2; exit }' monitor/assets.tsv; }
+
+          id=$(asset_id "TemperaturMonitor-${VERSION}.msi")
+          if [ -z "$id" ]; then
+            echo "::error::Asset 'TemperaturMonitor-${VERSION}.msi' not found in SebastianHinz73/Tools."
+            echo "Available assets:"
+            cut -f1 monitor/assets.tsv | sort -u
+            exit 1
+          fi
+
+          gh api "repos/SebastianHinz73/Tools/releases/assets/${id}" \
+            -H "Accept: application/octet-stream" > "monitor/TemperaturMonitor-${VERSION}.msi"
+
+          sha_id=$(asset_id "TemperaturMonitor-${VERSION}.msi.sha256")
+          if [ -n "$sha_id" ]; then
+            gh api "repos/SebastianHinz73/Tools/releases/assets/${sha_id}" \
+              -H "Accept: application/octet-stream" > "monitor/TemperaturMonitor-${VERSION}.msi.sha256"
+
+            expected=$(awk '{ print $1 }' "monitor/TemperaturMonitor-${VERSION}.msi.sha256")
+            actual=$(sha256sum "monitor/TemperaturMonitor-${VERSION}.msi" | awk '{ print $1 }')
+            if [ "$expected" != "$actual" ]; then
+              echo "::error::sha256 mismatch for TemperaturMonitor-${VERSION}.msi (expected $expected, got $actual)"
+              exit 1
+            fi
+            echo "sha256 verified: $actual"
+          else
+            (cd monitor && sha256sum "TemperaturMonitor-${VERSION}.msi" > "TemperaturMonitor-${VERSION}.msi.sha256")
+            echo "::warning::No .sha256 asset in the Tools repository, generated one locally."
+          fi
+
+          ls -l monitor
+
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
@@ -217,5 +267,7 @@ jobs:
           files: |
             artifacts/*.bin
             install_v*.zip
+            monitor/*.msi
+            monitor/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
