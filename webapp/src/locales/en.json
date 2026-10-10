@@ -190,7 +190,6 @@
         "SdkVersion": "SDK Version",
         "ConfigVersion": "Config Version",
         "FirmwareVersion": "Firmware Version / Git Hash",
-        "TemploggerVersion": "Logger Version",
         "PioEnv": "PIO Environment",
         "FirmwareVersionHint": "Click here to show information about your current version",
         "FirmwareUpdate": "Firmware Update",

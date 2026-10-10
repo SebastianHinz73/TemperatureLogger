@@ -9,7 +9,6 @@
 #include <memory>
 #include <vector>
 
-#define TEMP_LOGGER_VERSION "2.1.5"
 #define TIME_SCAN_NEW_SENSORS 60
 
 class DS18B20ListClass {

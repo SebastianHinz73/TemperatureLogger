@@ -29,10 +29,6 @@
                         </td>
                     </tr>
                     <tr>
-                        <th>{{ $t('firmwareinfo.TemploggerVersion') }}</th>
-                        <td>{{ systemStatus.templogger_version }}</td>
-                    </tr>
-                    <tr>
                         <th>{{ $t('firmwareinfo.PioEnv') }}</th>
                         <td>{{ systemStatus.pioenv }}</td>
                     </tr>

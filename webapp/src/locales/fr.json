@@ -203,7 +203,6 @@
         "SdkVersion": "Version du SDK",
         "ConfigVersion": "Version de la configuration",
         "FirmwareVersion": "Version du firmware / Hash Git",
-        "TemploggerVersion": "Version enregistreur de température",
         "PioEnv": "PIO Environment",
         "FirmwareVersionHint": "Cliquez ici pour afficher des informations sur votre version actuelle",
         "FirmwareUpdate": "Mise à jour du firmware",

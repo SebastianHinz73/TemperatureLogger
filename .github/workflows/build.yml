@@ -105,13 +105,17 @@ jobs:
     name: Open PR with firmware binaries
     runs-on: ubuntu-latest
     needs: [get_default_envs, build]
-    # Only for a manual run on the master branch. A run on a tag creates the release instead.
-    if: github.ref == 'refs/heads/master'
+    # Only for a manual run on a tag. The binaries are then built from the tagged commit, so
+    # __COMPILED_GIT_HASH__ contains the tag (e.g. "V2.1.5") instead of a bare commit hash.
+    if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
       pull-requests: write
     steps:
+      # The PR is opened against master, the binaries come from the artifacts of the tagged build
       - uses: actions/checkout@v4
+        with:
+          ref: master
 
       - uses: actions/download-artifact@v4
         with:
@@ -132,32 +136,28 @@ jobs:
           echo "Found $found binary files in install/"
           [ "$found" -eq 4 ] || { echo "Expected 4 binaries, got $found"; exit 1; }
 
-      - name: Read version from source
-        id: version
-        run: |
-          version=$(sed -n 's/^#define TEMP_LOGGER_VERSION "\(.*\)".*/\1/p' include/Logger/DS18B20List.h | tr -d '\r')
-          echo "version=$version" >> $GITHUB_OUTPUT
-
       - uses: peter-evans/create-pull-request@v6
         with:
+          base: master
           branch: ci/install-binaries
           delete-branch: true
           add-paths: install
           commit-message: |
-            install: update firmware binaries to ${{ steps.version.outputs.version }} (CI build #${{ github.run_number }})
-          title: "install: update firmware binaries to ${{ steps.version.outputs.version }}"
+            install: update firmware binaries to ${{ github.ref_name }} (CI build #${{ github.run_number }})
+          title: "install: update firmware binaries to ${{ github.ref_name }}"
           body: |
             Automated update of the firmware binaries in the `install` directory.
 
-            - Version: `${{ steps.version.outputs.version }}`
+            - Tag: `${{ github.ref_name }}`
             - Source commit: `${{ github.sha }}`
             - Workflow run: #${{ github.run_number }}
 
-            The binaries were built by the *TemperatureLogger Build* workflow and copied into
-            `install/<environment>/` for every environment configured in `custom_ci_action`.
+            The binaries were built from the tag, so the firmware reports the tag instead of a
+            commit hash. They were copied into `install/<environment>/` for every environment
+            configured in `custom_ci_action`.
 
-            Please review and merge this PR before creating the release tag, otherwise the
-            `install` directory of the release will still contain the previous binaries.
+            The release assets are created by the same workflow run, so merging this PR only
+            keeps the `install` directory in the repository in sync.
 
   release:
     name: Create Release
@@ -192,12 +192,30 @@ jobs:
           cd artifacts
           for i in */; do cp ${i}templogger-*.bin ./; done
 
+      - name: Build install zip
+        run: |
+          # The tag is the single source of truth for the version, e.g. "V2.1.5" -> "2.1.5"
+          version=$(echo "$GITHUB_REF_NAME" | sed 's/^[^0-9]*//')
+
+          # Stage the install directory of the tag and replace the binaries with the ones
+          # that were just built, because the tagged commit still contains the previous ones.
+          mkdir -p staging
+          cp -r install staging/install
+          for dir in artifacts/*/; do
+            environment="$(basename "$dir")"
+            cp "$dir$environment.bin" "$dir$environment.factory.bin" "staging/install/$environment/"
+          done
+
+          (cd staging && zip -r "$GITHUB_WORKSPACE/install_v${version}.zip" install)
+          unzip -l "install_v${version}.zip"
+
       - name: Create release
         uses: softprops/action-gh-release@v1
         with:
           body: ${{steps.github_release.outputs.changelog}}
           draft: False
           files: |
-            artifacts/*.zip, artifacts/*.bin
+            artifacts/*.bin
+            install_v*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

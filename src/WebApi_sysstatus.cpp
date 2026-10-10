@@ -4,7 +4,6 @@
  */
 #include "WebApi_sysstatus.h"
 #include "Configuration.h"
-#include "Logger/DS18B20List.h"
 #include "Logger/RamDrive.h"
 #include "NetworkSettings.h"
 #include "PinMapping.h"
@@ -88,7 +87,6 @@ void WebApiSysstatusClass::onSystemStatus(AsyncWebServerRequest* request)
     snprintf(version, sizeof(version), "%d.%d.%d", CONFIG_VERSION >> 24 & 0xff, CONFIG_VERSION >> 16 & 0xff, CONFIG_VERSION >> 8 & 0xff);
     root["config_version"] = version;
     root["git_hash"] = __COMPILED_GIT_HASH__;
-    root["templogger_version"] = TEMP_LOGGER_VERSION;
     root["pioenv"] = PIOENV;
 
     root["uptime"] = esp_timer_get_time() / 1000000;

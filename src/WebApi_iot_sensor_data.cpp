@@ -5,10 +5,10 @@
 #include "WebApi_iot_sensor_data.h"
 #include "Configuration.h"
 #include "Datastore.h"
-#include "Logger/DS18B20List.h"
 #include "MessageOutput.h"
 #include "NetworkSettings.h"
 #include "WebApi.h"
+#include "__compiled_constants.h"
 #include "defaults.h"
 #include <AsyncJson.h>
 #include <memory>
@@ -43,7 +43,7 @@ void WebApiIotSensorData::onConfig(AsyncWebServerRequest* request)
         }
 
         auto config = Configuration.get();
-        snprintf(buffer, sizeof(buffer), "1;%s;%s;%s;-1\n", NetworkSettingsClass::getHostname().c_str(), TEMP_LOGGER_VERSION, bootTime.c_str());
+        snprintf(buffer, sizeof(buffer), "1;%s;%s;%s;-1\n", NetworkSettingsClass::getHostname().c_str(), __COMPILED_GIT_HASH__, bootTime.c_str());
 
         String text = buffer;
 
