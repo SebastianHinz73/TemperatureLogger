@@ -214,9 +214,19 @@ jobs:
           (cd staging && zip -r "$GITHUB_WORKSPACE/install_v${version}.zip" install)
           unzip -l "install_v${version}.zip"
 
+      - name: Create access token for the Tools repository
+        id: tools-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.TOOLS_APP_ID }}
+          private-key: ${{ secrets.TOOLS_APP_PRIVATE_KEY }}
+          owner: SebastianHinz73
+          repositories: Tools
+          permission-contents: read
+
       - name: Download TemperaturMonitor from the Tools repository
         env:
-          GH_TOKEN: ${{ secrets.TOOLS_TOKEN }}
+          GH_TOKEN: ${{ steps.tools-token.outputs.token }}
           VERSION: ${{ inputs.monitor_version }}
         run: |
           set -euo pipefail
