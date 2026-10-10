@@ -218,7 +218,7 @@ jobs:
         id: tools-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ secrets.TOOLS_APP_ID }}
+          client-id: ${{ vars.TOOLS_APP_CLIENT_ID }}
           private-key: ${{ secrets.TOOLS_APP_PRIVATE_KEY }}
           owner: SebastianHinz73
           repositories: Tools
