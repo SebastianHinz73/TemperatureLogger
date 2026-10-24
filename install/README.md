@@ -4,6 +4,9 @@ There are compiled binaries for an ESP32 and an ESP32-S3 N16R8 board, which has 
 
 Flash.cmd can be used for a completely new installation. The pin mapping must then be configured with a json file. An existing temperature logger can be updated with the menu Settings -> Firmware Upgrade. To do this, the firmware.bin file is needed
 
+> **Video walkthrough:** A step-by-step video of this installation is available on YouTube:
+> [Installation Guide](https://youtu.be/Ak3Vr1q-YMg)
+
 ## Installation with flash.cmd
 
 1. Download and extract the zip file

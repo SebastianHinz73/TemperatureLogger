@@ -6,6 +6,13 @@ There is a project page with more information. <https://www.diy-temperature-logg
 
 The project is licensed under an Open Source License ( GNU General Public License version 2).
 
+## Videos
+
+| ESP32 Temperature Logger – Overview | Installation Guide |
+|:---:|:---:|
+| [![ESP32 Temperature Logger Overview](https://img.youtube.com/vi/SNHLRRXslYE/mqdefault.jpg)](https://youtu.be/SNHLRRXslYE) | [![Installation Guide](https://img.youtube.com/vi/Ak3Vr1q-YMg/mqdefault.jpg)](https://youtu.be/Ak3Vr1q-YMg) |
+| General overview of the ESP32 logger and temperature monitor | Step-by-step installation instructions |
+
 ## Overview
 
 - Project for reading out DS18B20 sensors with an ESP32 board
